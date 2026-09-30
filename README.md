@@ -44,6 +44,7 @@ of each skill.
 | End the run (*kill -9*) | <kbd>K</kbd> twice |
 | Language | the *中文 / EN* button |
 | Colours | the *Theme* picker: Bright, Dark, Soft, Energy, Excited |
+| What is behind the board | the *Background* picker: OSI layers, TCP/IP layers, Data centre |
 
 ### Phones and tablets
 
@@ -77,6 +78,21 @@ unlocks the next one on that browser.
 | 6 | Stack Overflow | Overflow | 7 Application |
 | 7 | Full Stack | everything | all seven |
 
+### The protocol stack behind the board
+
+By default the play area sits on the **OSI model** itself: seven coloured
+bands from 7 Application at the top to 1 Physical at the bottom, each labelled
+with its number, name and data unit, and each showing what that layer carries
+— HTTP and DNS requests, TLS and UTF-8, sessions opening and closing, TCP
+segments to ports, a packet hopping between routers, Ethernet frames with MAC
+header and checksum, and a square-wave bit signal. A message on the right
+travels down the stack and picks up a header at each layer (DATA →
+TCP|DATA → IP|TCP|DATA → ETH|IP|TCP|DATA|FCS → bits): encapsulation, made
+visible. The layers the current level teaches are highlighted. The
+*Background* picker switches to the four **TCP/IP** layers (the same space
+grouped as Application, Transport, Internet and Link) or back to the data
+centre. Works in both the 2D and 3D views.
+
 Each level card explains its concept and names the OSI layer it belongs to.
 The **OSI model** button opens a reference panel: the seven layers with their
 job, data unit, example protocols and the levels that use them; encapsulation,
@@ -98,6 +114,7 @@ panel:
 | `js/engine.js` | deterministic, tick-based simulation: pixel terrain, packets, skills |
 | `js/levels.js` | **the levels** — rectangles of silicon and steel, hazards, skill budgets, concept notes, OSI tags — plus the OSI and TCP/IP reference text |
 | `js/backdrop.js` | the data centre behind the play area, shared by both views |
+| `js/layers.js` | the OSI / TCP/IP layer bands, their animations and the encapsulation message |
 | `js/render3d.js` | the 3D view: a WebGL2 renderer built from one instanced cube, camera and picking |
 | `js/main.js` | 2D rendering, input, overlays, progress, interface text in English and Mandarin |
 | `tools/check.js` | proves every level is winnable and not self-winning |
@@ -140,6 +157,12 @@ every push and pull request.
 <kbd>P</kbd> 暂停，<kbd>F</kbd> 快进，<kbd>R</kbd> 重来，<kbd>V</kbd> 切换 3D / 2D，<kbd>G</kbd> 全屏，
 连按两次 <kbd>K</kbd> 结束本局。3D 视图中拖动空白处旋转镜头，滚轮缩放，双击复位。
 **配色**选单提供明亮、暗夜、柔和、活力、热烈五种配色。
+
+**协议栈背景**：棋盘背后默认是 OSI 七层模型 —— 从顶部的第 7 层应用层到底部的第 1 层
+物理层，每层都标有编号、名称和数据单位，并展示该层传输的内容（HTTP 请求、TLS、会话、
+TCP 段与端口、在路由器之间跳转的数据包、以太网帧、比特信号）。右侧有一条消息沿协议栈
+向下移动，每经过一层就加上一个首部，直观展示封装过程。当前关卡涉及的层会高亮显示。
+**背景**选单可切换为 TCP/IP 四层或数据中心。
 
 **手机与平板**：点选技能后点击数据包即可，触屏的点击范围更大。竖屏时技能排成网格，
 横屏时棋盘在左、技能栏在右。3D 视图可双指缩放。**全屏**按钮会隐藏菜单栏；安卓和电脑上

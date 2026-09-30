@@ -11,6 +11,8 @@ const TEXT = {
     "app.title": "Packet Rush",
     "app.tagline": "Packets march blindly across the network. Give them jobs so enough of them reach the server.",
     "btn.osi": "OSI model",
+    "bg.label": "Background", "bg.osi": "Background: OSI layers", "bg.tcpip": "Background: TCP/IP layers", "bg.datacentre": "Background: Data centre",
+    "bg.osiRange": "OSI {range}",
     "osi.title": "The OSI model", "osi.sub": "Seven layers, each with one job. Data travels down the stack to be sent and back up to be received.",
     "osi.source": "Background reading:", "osi.layer": "Layer {n}", "osi.pdu": "unit: {pdu}", "osi.inGame": "In Packet Rush:",
     "osi.chip": "OSI layer {n} · {name}", "osi.chipAll": "All seven OSI layers",
@@ -64,6 +66,8 @@ const TEXT = {
     "app.title": "数据包大冲关",
     "app.tagline": "数据包只会盲目地向前走。给它们分配工作，让足够多的数据包到达服务器。",
     "btn.osi": "OSI 模型",
+    "bg.label": "背景", "bg.osi": "背景：OSI 七层", "bg.tcpip": "背景：TCP/IP 四层", "bg.datacentre": "背景：数据中心",
+    "bg.osiRange": "OSI {range}",
     "osi.title": "OSI 七层模型", "osi.sub": "七层结构，每层只负责一件事。发送时数据沿协议栈向下传递，接收时再向上传回。",
     "osi.source": "背景阅读：", "osi.layer": "第 {n} 层", "osi.pdu": "数据单位：{pdu}", "osi.inGame": "对应关卡：",
     "osi.chip": "OSI 第 {n} 层 · {name}", "osi.chipAll": "OSI 全部七层",
@@ -125,6 +129,9 @@ let lang = store.get("bitbuilder.lang", (navigator.language || "en").toLowerCase
    GitHub Pages origin, so the two stay in step when both are played. */
 let theme = store.get("packetrush.theme", store.get("bitbuilder.theme", "bright"));
 let soundOn = store.get("packetrush.sound", "on") === "on";
+/* What sits behind the play area: the OSI stack (default), the TCP/IP stack, or the data centre. */
+let backdrop = store.get("packetrush.backdrop", "osi");
+if (!["osi", "tcpip", "datacentre"].includes(backdrop)) backdrop = "osi";
 let progress;
 try { progress = JSON.parse(store.get("packetrush.progress", "")) || null; } catch (e) { progress = null; }
 if (!progress || typeof progress !== "object") progress = { unlocked: 1, best: {} };
@@ -331,7 +338,83 @@ function paintBackdrop(pal) {
   backdropFor = pal;
 }
 
+/* ------------------------------------------------ the protocol-stack backdrop */
+const layerCanvas = document.createElement("canvas");
+layerCanvas.width = LW * SCALE; layerCanvas.height = LH * SCALE;
+let layerKey = "";
+
+const isLight = pal => pal.sky1.startsWith("#e") || pal.sky1.startsWith("#f");
+const currentBands = () => layerBands(backdrop, game ? game.level.osi : []);
+
+/* Name and data unit for a band, in the current language. */
+function bandLabel(band) {
+  if (backdrop === "tcpip") {
+    const tl = TCPIP_LAYERS[["app", "transport", "internet", "link"].indexOf(band.key)], nums = band.nums;
+    return { badge: "", name: L(tl.name), sub: t("bg.osiRange", { range: nums.length > 1 ? `${nums[nums.length - 1]}–${nums[0]}` : nums[0] }) };
+  }
+  const l = OSI_LAYERS.find(x => x.n === band.nums[0]);
+  return { badge: String(l.n), name: L(l.name), sub: L(l.pdu) };
+}
+
+function paintLayers(pal, bands) {
+  const b = layerCanvas.getContext("2d"), light = isLight(pal);
+  b.setTransform(SCALE, 0, 0, SCALE, 0, 0);
+  const g = b.createLinearGradient(0, 0, 0, LH);
+  g.addColorStop(0, pal.sky1); g.addColorStop(1, pal.sky2);
+  b.fillStyle = g;
+  b.fillRect(0, 0, LW, LH);
+  for (const band of bands) {
+    const a = band.focus ? (light ? 0.30 : 0.20) : (light ? 0.13 : 0.08);
+    b.fillStyle = rgba(band.color, a);
+    b.fillRect(0, band.y0, LW, band.y1 - band.y0);
+    b.fillStyle = rgba(band.color, band.focus ? 0.8 : 0.4);
+    b.fillRect(0, band.y0, LW, band.focus ? 0.9 : 0.5);                 // divider
+    if (band.focus) b.fillRect(0, band.y0, 2.5, band.y1 - band.y0);       // marker on the edge
+    /* label on the left: badge, name, data unit */
+    const lab = bandLabel(band), cy = (band.y0 + band.y1) / 2;
+    let x = 6;
+    b.textBaseline = "middle";
+    if (lab.badge) {
+      b.fillStyle = rgba(band.color, band.focus ? 0.95 : 0.6);
+      b.beginPath(); b.roundRect ? b.roundRect(x, cy - 5, 10, 10, 2) : b.rect(x, cy - 5, 10, 10); b.fill();
+      b.fillStyle = "#0b1020";
+      b.font = "bold 7px ui-sans-serif, system-ui, sans-serif";
+      b.textAlign = "center";
+      b.fillText(lab.badge, x + 5, cy + 0.4);
+      x += 14;
+    }
+    b.textAlign = "left";
+    b.fillStyle = rgba(band.color, band.focus ? 0.95 : (light ? 0.7 : 0.6));
+    b.font = `bold 7.5px ui-sans-serif, system-ui, sans-serif`;
+    b.fillText(lab.name, x, cy - 3);
+    b.font = `6px ui-sans-serif, system-ui, sans-serif`;
+    b.fillStyle = rgba(band.color, band.focus ? 0.8 : 0.45);
+    b.fillText(lab.sub, x, cy + 5);
+    b.textBaseline = "alphabetic";
+  }
+  const v = b.createRadialGradient(LW / 2, LH / 2, LH * 0.4, LW / 2, LH / 2, LW * 0.65);
+  v.addColorStop(0, "rgba(0,0,0,0)");
+  v.addColorStop(1, light ? "rgba(90,70,140,0.10)" : "rgba(0,0,0,0.32)");
+  b.fillStyle = v;
+  b.fillRect(0, 0, LW, LH);
+}
+
+function drawLayers(pal) {
+  const bands = currentBands();
+  const key = [theme, backdrop, lang, bands.map(x => x.focus ? 1 : 0).join("")].join("|");
+  if (key !== layerKey) { paintLayers(pal, bands); layerKey = key; }
+  ctx.drawImage(layerCanvas, 0, 0, LW, LH);
+  const f = reduceMotion ? 0 : frame, light = isLight(pal);
+  const focus = new Set(game ? game.level.osi : []);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(70, 0, LW - 70, LH); ctx.clip();          // keep the labels clear
+  drawLayerMotifs(ctx, f, light, focus);
+  ctx.restore();
+  drawEncapsulation(ctx, reduceMotion ? 200 : frame, light);
+}
+
 function drawBackground(pal) {
+  if (backdrop !== "datacentre") { drawLayers(pal); return; }
   if (backdropFor !== pal) paintBackdrop(pal);
   ctx.drawImage(backdropCanvas, 0, 0, LW, LH);
   const light = pal.sky1.startsWith("#e") || pal.sky1.startsWith("#f");
@@ -560,7 +643,9 @@ function render() {
    floating labels, overflow countdowns, the target ring and the pause card. */
 function render3D() {
   const target = hover && running ? game.pick(hover.x, hover.y, selected) : null;
-  r3.render(game, { pal: palette(), frame, hot: target, effects });
+  const bands = backdrop === "datacentre" ? null : currentBands();
+  r3.render(game, { pal: palette(), frame, hot: target, effects, bands,
+    bandsKey: bands ? [backdrop, bands.map(x => x.focus ? 1 : 0).join("")].join("|") : "" });
 
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const W = Math.round(fxCanvas.clientWidth * dpr), H = Math.round(fxCanvas.clientHeight * dpr);
@@ -570,6 +655,33 @@ function render3D() {
   const unit = W / 400;                     // roughly one world pixel on screen
   const at = (x, y, z) => { const s = r3.project(x, y, z); return [s.x * W, s.y * H]; };
   fx.textAlign = "center";
+
+  /* layer names on the back wall, and the header the message has picked up */
+  if (backdrop !== "datacentre") {
+    const light = isLight(palette());
+    fx.textBaseline = "middle";
+    for (const band of currentBands()) {
+      const cy = (band.y0 + band.y1) / 2;
+      if (r3.occluded(game, 4, cy, r3.bandZ + 1) || r3.occluded(game, 40, cy, r3.bandZ + 1)) continue;
+      const lab = bandLabel(band), [sx, sy] = at(4, cy, r3.bandZ + 1);
+      fx.textAlign = "left";
+      fx.globalAlpha = band.focus ? 0.95 : (light ? 0.75 : 0.6);
+      fx.fillStyle = band.color;
+      fx.font = `bold ${Math.round(7 * unit)}px ui-sans-serif, system-ui, sans-serif`;
+      fx.fillText((lab.badge ? lab.badge + "  " : "") + lab.name, sx, sy - 3.5 * unit);
+      fx.font = `${Math.round(5.5 * unit)}px ui-sans-serif, system-ui, sans-serif`;
+      fx.fillText(lab.sub, sx + (lab.badge ? 9 * unit : 0), sy + 4.5 * unit);
+    }
+    const e = encapAt(reduceMotion ? 200 : frame), [ex, ey] = at(360, e.y, r3.bandZ + 3);
+    fx.globalAlpha = r3.occluded(game, 360, e.y, r3.bandZ + 3) ? 0 : Math.max(0, e.fade);
+    fx.textAlign = "center";
+    fx.font = `bold ${Math.round(5.5 * unit)}px ui-monospace, monospace`;
+    fx.fillStyle = light ? "#1f1a33" : "#ffffff";
+    fx.fillText(ENCAP[e.n], ex, ey);
+    fx.globalAlpha = 1;
+    fx.textBaseline = "alphabetic";
+    fx.textAlign = "center";
+  }
 
   for (const e of effects) {
     if (e.kind !== "text") continue;
@@ -797,7 +909,6 @@ function overlay({ title, goal, note, stats, primary, secondary }) {
 function hideOverlay() { el("overlay").classList.add("hidden"); running = true; last = performance.now(); acc = 0; }
 
 /* ------------------------------------------------------------ OSI model */
-const OSI_COLORS = { 7: "#f472b6", 6: "#c084fc", 5: "#818cf8", 4: "#38bdf8", 3: "#34d399", 2: "#facc15", 1: "#fb923c" };
 
 function renderOsiChips(lv) {
   const box = el("ov-osi");
@@ -1216,6 +1327,9 @@ function applyText() {
   for (const n of document.querySelectorAll("[data-th]")) n.innerHTML = t(n.dataset.th);
   el("btn-lang").textContent = t("lang.other");
   for (const o of el("theme-pick").options) o.textContent = t("theme." + o.value);
+  for (const o of el("backdrop-pick").options) o.textContent = t("bg." + o.value);
+  el("backdrop-pick").value = backdrop;
+  el("backdrop-pick").title = t("bg.label");
   el("theme-pick").title = t("theme.label");
   el("btn-pause").querySelector("span").textContent = t(paused ? "ctl.resume" : "ctl.pause");
   buildHelp();
@@ -1245,6 +1359,13 @@ el("theme-pick").onchange = ev => {
   ev.target.blur();                      // hand the keyboard back to the game
 };
 el("btn-levels").onclick = openLevels;
+el("backdrop-pick").onchange = ev => {
+  backdrop = ev.target.value;
+  store.set("packetrush.backdrop", backdrop);
+  layerKey = "";
+  if (r3) r3.markDirty();
+  ev.target.blur();
+};
 el("btn-help").onclick = () => el("help-dialog").showModal();
 el("btn-osi").onclick = () => openOsi(null);
 

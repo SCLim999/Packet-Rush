@@ -36,6 +36,12 @@
       <option value="energy">Energy</option>
       <option value="excited">Excited</option>
     </select>
+    <label class="sr-only" for="backdrop-pick" data-t="bg.label">Background</label>
+    <select id="backdrop-pick" class="theme-pick" title="Background">
+      <option value="osi">OSI layers</option>
+      <option value="tcpip">TCP/IP layers</option>
+      <option value="datacentre">Data centre</option>
+    </select>
     <button id="btn-osi" class="btn" data-t="btn.osi">OSI model</button>
     <button id="btn-help" class="btn" data-t="btn.help">How to play</button>
   </div>
@@ -127,6 +133,7 @@
 <script src="js/engine.js"></script>
 <script src="js/levels.js"></script>
 <script src="js/backdrop.js"></script>
+<script src="js/layers.js"></script>
 <script src="js/render3d.js"></script>
 <script src="js/main.js"></script>
 </body>

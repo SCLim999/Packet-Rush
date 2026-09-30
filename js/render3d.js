@@ -123,7 +123,7 @@ function createRenderer3D(canvas) {
 
   /* ---------------------------------------------------------- terrain */
   const CELL = 2, DEPTH = { 1: 30, 2: 34, 3: 12 };
-  function buildTerrain(game, pal) {
+  function buildTerrain(game, pal, bands) {
     terrain.n = 0;
     const map = game.map;
     const cw = LW / CELL, ch = LH / CELL;
@@ -170,7 +170,8 @@ function createRenderer3D(canvas) {
     const line = wall.map((v, i) => v * (1 - g[3] * 3) + gc[i] * g[3] * 3);
     for (let x = -700; x <= LW + 700; x += 20) push(terrain, x, -LH / 2, -79.3, 0.6, LH + 1000, 0.4, line);
     for (let y = -500; y <= LH + 500; y += 20) push(terrain, LW / 2, -y, -79.3, LW + 1400, 0.6, 0.4, line);
-    buildRoom(pal);
+    if (bands) buildBands(bands, pal); else buildRoom(pal);
+    buildFloor(pal);
     upload(terrain);
   }
 
@@ -194,7 +195,25 @@ function createRenderer3D(canvas) {
     for (const x of BACKDROP.hangers) box(terrain, x, -40, 1, t.y + 40, TRAY_Z, 1, edge);
     for (const y of BACKDROP.fibres) box(terrain, -200, y, LW + 400, 0.6, TRAY_Z + 3, 0.6, shade(rgb(pal.pulse), 0.6));
     for (const x of BACKDROP.lights) box(terrain, x - 20, -24, 40, 2, -10, 16, rgb(pal.light), 0.9);
+  }
 
+  /* The protocol stack as the back wall: one lit panel per layer, the
+     layers the level teaches brighter, a divider along the top of each. */
+  const BAND_Z = -76;
+  function buildBands(bands, pal) {
+    const sky = rgb(pal.sky2);
+    for (const band of bands) {
+      const c = rgb(band.color), k = band.focus ? 0.42 : 0.2;
+      const fill = sky.map((v, i) => v * (1 - k) + c[i] * k);
+      box(terrain, -300, band.y0, LW + 600, band.y1 - band.y0, BAND_Z, 1, fill, band.focus ? 0.25 : 0.05);
+      box(terrain, -300, band.y0, LW + 600, band.focus ? 1.2 : 0.6, BAND_Z + 0.8, 0.6, c, band.focus ? 0.9 : 0.4);
+      if (band.focus) box(terrain, -4, band.y0, 3, band.y1 - band.y0, BAND_Z + 1, 1, c, 0.9);
+    }
+    /* above the top band and below the bottom one, the plain wall */
+    box(terrain, -300, -400, LW + 600, 400, BAND_Z - 1, 1, shade(sky, 0.9));
+  }
+
+  function buildFloor(pal) {
     /* raised floor: tiles in a checker of two tones, every third one perforated */
     const floor = rgb(pal.floor), alt = shade(floor, 1.18), vent = shade(floor, 0.7);
     for (let x = -160; x < LW + 160; x += 20) {
@@ -204,6 +223,23 @@ function createRenderer3D(canvas) {
         if (perforated) box(terrain, x + 4, LH + 1.7, 11, 0.4, z + 10, 11, vent);
       }
     }
+  }
+
+  /* Signals moving along each layer, and the message travelling down the
+     stack on the right (its label is drawn by the overlay). */
+  function bandLights(bands, frame) {
+    const b = objects, f = reduceMotion3d ? 0 : frame;
+    for (const band of bands) {
+      const c = rgb(band.color), h = band.y1 - band.y0;
+      for (let i = 0; i < 3; i++) {
+        const dir = (band.nums[0] % 2) ? 1 : -1;
+        const x = ((i * 160 + dir * f * (0.4 + band.nums[0] * 0.05)) % 480 + 480) % 480 - 40;
+        box(b, x, band.y0 + h * (0.3 + 0.2 * i), 14, 1.4, BAND_Z + 1.2, 0.6, c, band.focus ? 1 : 0.6);
+      }
+    }
+    const e = encapAt(reduceMotion3d ? 200 : frame);
+    const w = ENCAP[e.n].length * 3.7 + 8;
+    box(b, 360 - w / 2, e.y - 5, w, 10, BAND_Z + 2, 1.2, rgb(OSI_COLORS[e.n]), 0.55 * Math.max(0, e.fade));
   }
 
   function roomLights(pal, frame) {
@@ -393,11 +429,12 @@ function createRenderer3D(canvas) {
   }
 
   /* ------------------------------------------------------------ public */
-  let lastPal = null, lastW = 0, lastH = 0;
+  let lastKey = null, lastPalObj = null, lastW = 0, lastH = 0;
 
   return {
     canvas,
-    markDirty() { lastPal = null; },
+    markDirty() { lastKey = null; },
+    bandZ: BAND_Z,
     orbit(dx, dy) {
       cam.yaw = Math.max(-1.1, Math.min(1.1, cam.yaw - dx * 0.006));
       cam.pitch = Math.max(-0.1, Math.min(1.15, cam.pitch + dy * 0.005));
@@ -409,16 +446,33 @@ function createRenderer3D(canvas) {
       return toWorld(((clientX - r.left) / r.width) * 2 - 1, 1 - ((clientY - r.top) / r.height) * 2);
     },
     project(x, y, z) { return toScreen(x, y, z); },
+    /* Is world point (x, y, z) hidden behind terrain from the camera? Walks
+       the sight line through the slab the terrain occupies and tests the
+       map; used to hide overlay labels that would float over solid ground. */
+    occluded(game, x, y, z) {
+      const px = x, py = -y, pz = z;
+      const half = DEPTH[2] / 2;
+      for (let i = 1; i < 60; i++) {
+        const t = i / 60;
+        const wx = eye[0] + (px - eye[0]) * t, wy = eye[1] + (py - eye[1]) * t, wz = eye[2] + (pz - eye[2]) * t;
+        if (Math.abs(wz) > half) continue;
+        if (game.solid(Math.round(wx), Math.round(-wy))) return true;
+      }
+      return false;
+    },
 
     render(game, opt) {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const w = Math.round(canvas.clientWidth * dpr) || canvas.width, h = Math.round(canvas.clientHeight * dpr) || canvas.height;
       if (w !== lastW || h !== lastH) { canvas.width = w; canvas.height = h; lastW = w; lastH = h; }
       updateCamera();
-      if (game.dirty || lastPal !== opt.pal) { buildTerrain(game, opt.pal); lastPal = opt.pal; game.dirty = false; }
+      const key = opt.pal.sky1 + opt.pal.dirt + (opt.bandsKey || "room");
+      if (game.dirty || lastKey !== key || lastPalObj !== opt.pal) {
+        buildTerrain(game, opt.pal, opt.bands); lastKey = key; lastPalObj = opt.pal; game.dirty = false;
+      }
 
       objects.n = 0; ghosts.n = 0;
-      roomLights(opt.pal, opt.frame);
+      if (opt.bands) bandLights(opt.bands, opt.frame); else roomLights(opt.pal, opt.frame);
       scenery(game, opt.frame);
       for (const p of game.packets) {
         if (!p.alive) continue;
