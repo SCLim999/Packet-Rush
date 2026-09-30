@@ -1,0 +1,28 @@
+# Every level must stay winnable, and none may win itself. tools/check.js
+# replays a scripted solution through the real engine — no dependencies, so
+# there is nothing to install.
+name: Level checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Levels, OSI data and scripted solutions
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Every level wins with its scripted solution and loses when left alone
+        run: node tools/check.js
+      - name: Every script parses
+        run: for f in js/*.js tools/*.js; do node --check "$f"; done
