@@ -20,8 +20,10 @@ const TEXT = {
     "theme.soft": "Theme: Soft", "theme.energy": "Theme: Energy", "theme.excited": "Theme: Excited",
     "btn.sound": "Sound: {state}", "state.on": "on", "state.off": "off",
     "hud.level": "Level {n}", "hud.out": "Out", "hud.in": "Delivered", "hud.need": "Need", "hud.lost": "Lost", "hud.ttl": "TTL",
+    "mobile.rotate": "Turn your phone sideways for a bigger board.",
+    "ctl.full": "Full screen", "ctl.exitFull": "Exit full screen",
     "view.3d": "View: 3D", "view.2d": "View: 2D",
-    "view.hint": "3D view — drag empty space to tilt the camera, scroll to zoom, double-click to reset.",
+    "view.hint": "3D view — drag empty space to tilt the camera, scroll or pinch to zoom, double-click to reset.",
     "ctl.pause": "Pause", "ctl.resume": "Resume", "ctl.fast": "Fast", "ctl.restart": "Restart", "ctl.nuke": "kill -9",
     "ctl.nukeConfirm": "Press again to end the run",
     "levels.title": "Levels", "levels.sub": "Deliver enough packets to unlock the next network.",
@@ -45,7 +47,7 @@ const TEXT = {
     "help.title": "How to play",
     "help.p1": "Packets drop out of the <b>router</b> and walk forward until they hit a wall, then turn around. They step up small ledges, but a fall that is too long <b>corrupts</b> them, and walking off the edge of the map <b>drops</b> them.",
     "help.p2": "Choose a skill in the toolbar (or press <kbd>1</kbd>–<kbd>7</kbd>), then click a packet to give it that job. Each level hands out a limited number of each skill. Get enough packets into the <b>server</b> before their <b>TTL</b> — time to live — runs out.",
-    "help.p3": "<kbd>P</kbd> pause · <kbd>F</kbd> fast forward · <kbd>V</kbd> 3D / 2D view · <kbd>R</kbd> restart · <kbd>K</kbd> twice: <b>kill -9</b> ends the run by overflowing every packet.",
+    "help.p3": "<kbd>P</kbd> pause · <kbd>F</kbd> fast forward · <kbd>V</kbd> 3D / 2D view · <kbd>G</kbd> full screen · <kbd>R</kbd> restart · <kbd>K</kbd> twice: <b>kill -9</b> ends the run by overflowing every packet.",
     "foot.text": "A Lemmings-style networking puzzle. Mouse, keyboard or touch — no install, no plugins.",
     "skill.uplink": "Uplink", "skill.buffer": "Buffer", "skill.overflow": "Overflow", "skill.firewall": "Firewall",
     "skill.bridge": "Bridge", "skill.tunnel": "Tunnel", "skill.pipe": "Pipe",
@@ -71,8 +73,10 @@ const TEXT = {
     "theme.soft": "配色：柔和", "theme.energy": "配色：活力", "theme.excited": "配色：热烈",
     "btn.sound": "声音：{state}", "state.on": "开", "state.off": "关",
     "hud.level": "第 {n} 关", "hud.out": "已发出", "hud.in": "已送达", "hud.need": "需要", "hud.lost": "丢失", "hud.ttl": "TTL",
+    "mobile.rotate": "把手机横过来，棋盘会更大。",
+    "ctl.full": "全屏", "ctl.exitFull": "退出全屏",
     "view.3d": "视图：3D", "view.2d": "视图：2D",
-    "view.hint": "3D 视图 —— 拖动空白处旋转镜头，滚轮缩放，双击复位。",
+    "view.hint": "3D 视图 —— 拖动空白处旋转镜头，滚轮或双指缩放，双击复位。",
     "ctl.pause": "暂停", "ctl.resume": "继续", "ctl.fast": "快进", "ctl.restart": "重来", "ctl.nuke": "kill -9",
     "ctl.nukeConfirm": "再按一次结束本局",
     "levels.title": "关卡", "levels.sub": "送达足够的数据包即可解锁下一个网络。",
@@ -96,7 +100,7 @@ const TEXT = {
     "help.title": "玩法说明",
     "help.p1": "数据包从<b>路由器</b>里掉出来，一直向前走，碰到墙就掉头。它们能迈上小台阶，但摔得太远会<b>损坏</b>，走出地图边缘会<b>丢失</b>。",
     "help.p2": "在工具栏选择一个技能（或按 <kbd>1</kbd>–<kbd>7</kbd>），再点击一个数据包，把这项工作交给它。每关每种技能的数量有限。要在数据包的 <b>TTL</b>（生存时间）耗尽之前，把足够多的数据包送进<b>服务器</b>。",
-    "help.p3": "<kbd>P</kbd> 暂停 · <kbd>F</kbd> 快进 · <kbd>V</kbd> 切换 3D / 2D · <kbd>R</kbd> 重来 · 连按两次 <kbd>K</kbd>：<b>kill -9</b> 让所有数据包溢出，结束本局。",
+    "help.p3": "<kbd>P</kbd> 暂停 · <kbd>F</kbd> 快进 · <kbd>V</kbd> 切换 3D / 2D · <kbd>G</kbd> 全屏 · <kbd>R</kbd> 重来 · 连按两次 <kbd>K</kbd>：<b>kill -9</b> 让所有数据包溢出，结束本局。",
     "foot.text": "旅鼠风格的网络解谜游戏。鼠标、键盘或触屏均可 —— 无需安装，无需插件。",
     "skill.uplink": "上行链路", "skill.buffer": "缓冲区", "skill.overflow": "溢出", "skill.firewall": "防火墙",
     "skill.bridge": "网桥", "skill.tunnel": "隧道", "skill.pipe": "管道",
@@ -966,15 +970,17 @@ function worldPoint(ev) {
   return { x: (ev.clientX - r.left) / r.width * LW, y: (ev.clientY - r.top) / r.height * LH };
 }
 
-/* Returns true if the click landed on a packet (whether or not it took the skill). */
-function clickAt(pt) {
+/* Returns true if the click landed on a packet (whether or not it took the skill).
+   `slack` is extra reach in world pixels, used for fingers. */
+function clickAt(pt, slack = 0) {
   if (!running || game.state !== "playing") return false;
   hover = pt;
-  const any = game.pick(pt.x, pt.y, null);
+  const any = game.pick(pt.x, pt.y, null, slack);
   if (!selected) return !!any;
   if (game.skills[selected] <= 0) { el("skill-note").innerHTML = t("note.none", { skill: t("skill." + selected) }); return !!any; }
-  const p = game.pick(pt.x, pt.y, selected);
+  const p = game.pick(pt.x, pt.y, selected, slack);
   if (p && game.assign(p, selected)) {
+    try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) { /* no haptics */ }
     effects.push({ kind: "text", text: t("skill." + selected), x: p.x, y: p.y - 12, life: 30, color: "#fef08a" });
     beep(740, 50, "square", 0.04, 120);
     drainEvents();
@@ -984,19 +990,47 @@ function clickAt(pt) {
   return !!any;
 }
 
-canvas.addEventListener("pointermove", ev => { hover = worldPoint(ev); });
+/* A fingertip is about 14 CSS pixels of reach either side; in world pixels
+   that depends on how big the board is drawn. Capped so a tap never grabs a
+   packet from across the map. */
+const FINGER = 14;
+function touchSlack2D() {
+  return Math.min(10, FINGER * LW / canvas.getBoundingClientRect().width);
+}
+
+canvas.addEventListener("pointermove", ev => { if (ev.pointerType !== "touch") hover = worldPoint(ev); });
 canvas.addEventListener("pointerleave", () => { hover = null; });
-canvas.addEventListener("pointerdown", ev => { clickAt(worldPoint(ev)); });
+canvas.addEventListener("pointerdown", ev => {
+  clickAt(worldPoint(ev), ev.pointerType === "touch" ? touchSlack2D() : 0);
+  if (ev.pointerType === "touch") hover = null;      // no hover ring left behind under a finger
+});
 
 /* In 3D a click on a packet assigns the skill; a drag that starts anywhere
    else tilts the camera. */
 if (r3) {
   const c3 = el("world3d");
   let drag = null;
+  const touches = new Map();                          // pointerId -> {x, y}, for pinch
+  let pinch = 0;
+  const slack3D = ev => {
+    const a = r3.pickPoint(ev.clientX, ev.clientY), b = r3.pickPoint(ev.clientX + FINGER, ev.clientY);
+    return Math.min(12, Math.hypot(b.x - a.x, b.y - a.y));
+  };
   const local = ev => { const r = c3.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; };
   c3.addEventListener("pointermove", ev => {
-    hoverScreen = local(ev);
-    hover = r3.pickPoint(ev.clientX, ev.clientY);
+    if (touches.has(ev.pointerId)) {
+      touches.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (touches.size === 2) {
+        const [a, b] = [...touches.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinch) r3.zoom(pinch / d);
+        pinch = d;
+        return;
+      }
+    }
+    if (ev.pointerType !== "touch") {
+      hoverScreen = local(ev);
+      hover = r3.pickPoint(ev.clientX, ev.clientY);
+    }
     if (drag) {
       r3.orbit(ev.clientX - drag.x, ev.clientY - drag.y);
       drag.x = ev.clientX; drag.y = ev.clientY;
@@ -1004,13 +1038,25 @@ if (r3) {
   });
   c3.addEventListener("pointerleave", () => { hover = null; hoverScreen = null; });
   c3.addEventListener("pointerdown", ev => {
-    hoverScreen = local(ev);
-    if (clickAt(r3.pickPoint(ev.clientX, ev.clientY))) return;
+    const touch = ev.pointerType === "touch";
+    if (touch) {
+      touches.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (touches.size === 2) { drag = null; pinch = 0; return; }   // second finger: pinch, not tap
+    }
+    hoverScreen = touch ? null : local(ev);
+    const hit = clickAt(r3.pickPoint(ev.clientX, ev.clientY), touch ? slack3D(ev) : 0);
+    if (touch) hover = null;
+    if (hit) return;
     drag = { x: ev.clientX, y: ev.clientY };
     c3.classList.add("orbiting");
     c3.setPointerCapture(ev.pointerId);
   });
-  const stop = () => { drag = null; c3.classList.remove("orbiting"); };
+  const stop = ev => {
+    drag = null;
+    c3.classList.remove("orbiting");
+    if (ev) touches.delete(ev.pointerId);
+    if (touches.size < 2) pinch = 0;
+  };
   c3.addEventListener("pointerup", stop);
   c3.addEventListener("pointercancel", stop);
   c3.addEventListener("dblclick", () => r3.resetView());
@@ -1024,10 +1070,54 @@ function applyView() {
   el("world3d").hidden = !view3d;
   el("fx").hidden = !view3d;
   el("btn-view").querySelector("span").textContent = t(view3d ? "view.3d" : "view.2d");
+  el("btn-full").querySelector("span").textContent = t(isFull() ? "ctl.exitFull" : "ctl.full");
   if (r3) r3.markDirty();
   if (game) game.dirty = true;
   if (r3) r3.markDirty();
 }
+
+/* Full screen. Where the browser allows it (desktops, Android) this is real
+   full screen, and phones are asked to lock to landscape. iPhones do not let
+   a page go full screen, so there — or if the request is refused — the game
+   switches to an immersive mode that hides the menu bar and gives the board
+   the whole page. Added to the home screen, the manifest opens it full screen
+   either way. */
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+let pseudoFs = false;
+const isFull = () => !!fsEl() || pseudoFs;
+
+function setPseudo(on) {
+  pseudoFs = on;
+  document.body.classList.toggle("pseudo-fs", on);
+  if (on) window.scrollTo(0, 0);
+  onFullChange();
+}
+
+function toggleFull() {
+  if (pseudoFs) { setPseudo(false); return; }
+  if (fsEl()) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    return;
+  }
+  const root = document.documentElement;
+  const req = root.requestFullscreen || root.webkitRequestFullscreen;
+  const native = req && (document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  if (!native) { setPseudo(true); return; }
+  Promise.resolve(req.call(root, { navigationUI: "hide" })).then(() => {
+    try { screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape").catch(() => {}); } catch (e) { /* not allowed */ }
+  }).catch(() => setPseudo(true));
+}
+
+function onFullChange() {
+  const on = isFull();
+  document.body.classList.toggle("fullscreen", on);
+  el("btn-full").setAttribute("aria-pressed", String(on));
+  el("btn-full").querySelector("span").textContent = t(on ? "ctl.exitFull" : "ctl.full");
+  if (r3) r3.markDirty();
+}
+document.addEventListener("fullscreenchange", onFullChange);
+document.addEventListener("webkitfullscreenchange", onFullChange);
+el("btn-full").onclick = toggleFull;
 
 function toggleView() {
   if (!r3) return;
@@ -1070,6 +1160,8 @@ document.addEventListener("keydown", ev => {
   if (k === "p" || k === " " && running) { togglePause(); ev.preventDefault(); }
   else if (k === "f") toggleFast();
   else if (k === "v") toggleView();
+  else if (k === "g") toggleFull();
+  else if (k === "escape" && pseudoFs) setPseudo(false);
   else if (k === "r") startLevel(levelIndex, true);
   else if (k === "k") nuke();
   else if (k === "enter" && !running && !el("overlay").classList.contains("hidden")) { el("ov-primary").click(); ev.preventDefault(); }

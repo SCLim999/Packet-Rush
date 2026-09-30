@@ -280,3 +280,116 @@ body.view-3d #world { visibility: hidden; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
+
+/* ------------------------------------------------------------ phones -- */
+/* Touch: no tap flash, no text selection when tapping fast, bigger targets,
+   and no keyboard hints nobody can press. */
+.skill, .ctl, .theme-pick, .osi-chip, .viewport { -webkit-tap-highlight-color: transparent; }
+.toolbar, .hud, .viewport { -webkit-user-select: none; user-select: none; }
+@media (pointer: coarse) {
+  kbd { display: none; }
+  .skill { min-height: 56px; }
+  .ctl, .theme-pick, .topbar .btn { min-height: 40px; }
+}
+
+.rotate-hint { display: none; margin: 0; font-size: 13px; color: var(--muted); text-align: center; }
+#btn-full[hidden] { display: none; }
+
+/* safe areas on notched phones */
+.topbar { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+.rush { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); padding-bottom: max(16px, env(safe-area-inset-bottom)); }
+
+/* On small screens a level card needs the whole screen, not the board's
+   190 px, so the overlay becomes a full-screen sheet. */
+@media (max-width: 700px), (max-height: 520px) {
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    border-radius: 0;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .overlay-card { max-width: 640px; padding: 16px; }
+  .overlay-card h2 { font-size: 21px; }
+  .overlay-buttons .btn { min-width: 120px; min-height: 44px; }
+}
+
+/* Portrait phone: compact header, skills on a tidy grid, a nudge to rotate. */
+@media (max-width: 600px) {
+  .topbar { gap: 10px; padding-top: 10px; padding-bottom: 10px; }
+  .topbar .brand p { display: none; }
+  .topbar h1 { font-size: 18px; }
+  .logo { width: 34px; height: 34px; font-size: 17px; }
+  .topbar-actions { gap: 6px; }
+  .topbar-actions .btn, .theme-pick { font-size: 13px; padding: 7px 10px; }
+  .rush { gap: 10px; }
+  .hud { padding: 8px 12px; gap: 4px 12px; font-size: 12.5px; }
+  .hud-name { flex-basis: 100%; order: -1; margin: 0; font-size: 15px; }
+  .rush-stage { padding: 6px; }
+  .skills { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; gap: 6px; }
+  .skill { width: auto; padding: 5px 2px; font-size: 11px; }
+  .controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 6px; }
+  .ctl { padding: 8px 6px; font-size: 13px; }
+  .skill-note { font-size: 13px; }
+  .foot { font-size: 11px; }
+}
+@media (max-width: 600px) and (orientation: portrait) and (pointer: coarse) {
+  .rotate-hint { display: block; }
+}
+
+/* Landscape phone and full screen: the screen is short and wide, so the
+   board takes the left and the toolbar becomes a column on the right. The
+   board is sized from the height left over, --chrome being everything above
+   and around it. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .topbar { padding-top: 4px; padding-bottom: 4px; gap: 8px; }
+  .topbar .brand p, .foot, .skill-note, .rotate-hint { display: none; }
+  .topbar h1 { font-size: 15px; }
+  .logo { width: 28px; height: 28px; font-size: 14px; border-radius: 8px; }
+  .topbar-actions { gap: 5px; }
+  .topbar-actions .btn, .theme-pick { font-size: 12px; padding: 4px 8px; min-height: 30px; }
+  .rush { --chrome: 100px; gap: 6px; padding-top: 6px; }
+  .hud { padding: 3px 10px; font-size: 12px; gap: 2px 12px; border-radius: 8px; }
+  .hud-name { font-size: 13px; }
+  .hud .pill { font-size: 10px; padding: 1px 8px; }
+}
+@media (orientation: landscape) {
+  body.fullscreen .rush { --chrome: 60px; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .rush { max-width: none; grid-template-columns: minmax(0, 1fr) clamp(190px, 26vw, 270px); align-items: start; }
+}
+@media (orientation: landscape) {
+  body.fullscreen .rush { max-width: none; grid-template-columns: minmax(0, 1fr) clamp(200px, 22vw, 300px); align-items: start; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .rush > .hud { grid-column: 1 / -1; }
+  .rush > .rush-stage { grid-column: 1; grid-row: 2; padding: 4px; }
+  .rush > .toolbar { grid-column: 2; grid-row: 2; flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+  .rush .skills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: 4px; }
+  .rush .skill { width: auto; min-height: 0; padding: 3px 2px 2px; font-size: 9.5px; }
+  .rush .skill canvas { width: 22px; height: 22px; }
+  .rush .skill .count { font-size: 11px; top: 1px; right: 4px; }
+  .rush .controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 4px; }
+  .rush .ctl { padding: 5px 6px; font-size: 12px; min-height: 30px; }
+  .viewport, #world { width: min(100%, calc((100dvh - var(--chrome)) * 2)); margin: 0 auto; }
+}
+@media (orientation: landscape) {
+  body.fullscreen .rush > .hud { grid-column: 1 / -1; }
+  body.fullscreen .rush > .rush-stage { grid-column: 1; grid-row: 2; }
+  body.fullscreen .rush > .toolbar { grid-column: 2; grid-row: 2; flex-direction: column; flex-wrap: nowrap; }
+  body.fullscreen .skills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+  body.fullscreen .skill { width: auto; }
+  body.fullscreen .controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  body.fullscreen .viewport, body.fullscreen #world { width: min(100%, calc((100dvh - var(--chrome, 60px)) * 2)); margin: 0 auto; }
+}
+
+/* Full screen — the browser's own, or on iPhones (which do not let pages go
+   full screen) an immersive mode that simply gives the game the whole page.
+   The menu bar goes; the Exit button in the toolbar brings it back. */
+body.fullscreen { min-height: 100dvh; }
+body.fullscreen .topbar, body.fullscreen .foot, body.fullscreen .rotate-hint, body.fullscreen .skill-note { display: none; }
+body.fullscreen .rush { padding-top: max(8px, env(safe-area-inset-top)); padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+body.fullscreen #btn-full { border-color: var(--cyan); color: var(--cyan); }
+body.fullscreen.pseudo-fs { overflow: hidden; }
+body.fullscreen .rush { min-height: 100dvh; align-content: center; }

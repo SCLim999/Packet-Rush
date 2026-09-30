@@ -2,7 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1b2534">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Packet Rush">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
 <title>Packet Rush — guide the packets to the server</title>
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/game.css">
@@ -71,12 +79,14 @@
       <button id="btn-pause" class="btn ctl"><span data-t="ctl.pause">Pause</span> <kbd>P</kbd></button>
       <button id="btn-fast" class="btn ctl" aria-pressed="false"><span data-t="ctl.fast">Fast</span> <kbd>F</kbd></button>
       <button id="btn-view" class="btn ctl"><span>View: 3D</span> <kbd>V</kbd></button>
+      <button id="btn-full" class="btn ctl" aria-pressed="false"><span data-t="ctl.full">Full screen</span> <kbd>G</kbd></button>
       <button id="btn-restart" class="btn ctl"><span data-t="ctl.restart">Restart</span> <kbd>R</kbd></button>
       <button id="btn-nuke" class="btn ctl nuke"><span data-t="ctl.nuke">kill -9</span> <kbd>K</kbd></button>
     </div>
   </div>
 
   <p id="skill-note" class="skill-note"></p>
+  <p id="rotate-hint" class="rotate-hint" data-t="mobile.rotate">Turn your phone sideways for a bigger board.</p>
 </main>
 
 <dialog id="levels-dialog">

@@ -113,12 +113,13 @@ class PacketGame {
 
   /* The packet under a point, preferring the one nearest the middle of its body.
      With a skill selected, packets that cannot take it are skipped, so a click
-     on a crowd lands on someone useful. */
-  pick(x, y, skill) {
+     on a crowd lands on someone useful. `slack` widens the target in world
+     pixels — a fingertip on a phone covers far more of the map than a mouse. */
+  pick(x, y, skill, slack = 0) {
     let best = null, bestD = Infinity;
     for (const p of this.packets) {
       if (!p.alive) continue;
-      if (Math.abs(p.x - x) > 5 || y < p.y - 11 || y > p.y + 3) continue;
+      if (Math.abs(p.x - x) > 5 + slack || y < p.y - 11 - slack || y > p.y + 3 + slack) continue;
       if (skill && !this.canAssign(p, skill)) continue;
       const d = Math.abs(p.x - x) + Math.abs(p.y - 4 - y);
       if (d < bestD) { bestD = d; best = p; }

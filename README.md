@@ -40,9 +40,27 @@ of each skill.
 | Pause / fast forward / restart | <kbd>P</kbd> / <kbd>F</kbd> / <kbd>R</kbd> |
 | Switch 3D / 2D view | <kbd>V</kbd>, or the *View* button |
 | Tilt / zoom / reset the 3D camera | drag empty space / scroll / double-click |
+| Full screen | <kbd>G</kbd>, or the *Full screen* button |
 | End the run (*kill -9*) | <kbd>K</kbd> twice |
 | Language | the *中文 / EN* button |
 | Colours | the *Theme* picker: Bright, Dark, Soft, Energy, Excited |
+
+### Phones and tablets
+
+- **Tap** a skill, then tap a packet. Taps reach a little further than a mouse
+  click, so a fingertip near a packet still counts, and a short buzz confirms
+  the job on phones that support it.
+- **Portrait** stacks the board over a grid of skills and suggests turning the
+  phone. **Landscape** puts the board on the left and the skills in a column
+  on the right, sized to fill the screen.
+- **3D view:** drag to tilt, pinch to zoom.
+- **Full screen** hides the menu bar and gives the board the whole screen. On
+  Android and desktops it is the browser's real full screen, and phones are
+  asked to lock to landscape. iPhones do not let web pages go full screen, so
+  there the button switches to an immersive mode instead — for true full
+  screen on an iPhone, use *Share → Add to Home Screen*: the web app manifest
+  opens it full screen, in landscape, with its own icon.
+- Level cards open as full-screen sheets on small screens.
 
 Progress and best scores are kept in `localStorage`, so finishing a level
 unlocks the next one on that browser.
@@ -83,6 +101,7 @@ panel:
 | `js/render3d.js` | the 3D view: a WebGL2 renderer built from one instanced cube, camera and picking |
 | `js/main.js` | 2D rendering, input, overlays, progress, interface text in English and Mandarin |
 | `tools/check.js` | proves every level is winnable and not self-winning |
+| `manifest.webmanifest`, `icons/` | home-screen install: full screen, landscape, app icon |
 
 ## Editing levels
 
@@ -118,9 +137,14 @@ every push and pull request.
 手写的 WebGL2 渲染器绘制。克隆后直接打开 `index.html` 即可。
 
 **操作**：在工具栏选择技能（或按 <kbd>1</kbd>–<kbd>7</kbd>），再点击数据包分配工作。
-<kbd>P</kbd> 暂停，<kbd>F</kbd> 快进，<kbd>R</kbd> 重来，<kbd>V</kbd> 切换 3D / 2D，
+<kbd>P</kbd> 暂停，<kbd>F</kbd> 快进，<kbd>R</kbd> 重来，<kbd>V</kbd> 切换 3D / 2D，<kbd>G</kbd> 全屏，
 连按两次 <kbd>K</kbd> 结束本局。3D 视图中拖动空白处旋转镜头，滚轮缩放，双击复位。
 **配色**选单提供明亮、暗夜、柔和、活力、热烈五种配色。
+
+**手机与平板**：点选技能后点击数据包即可，触屏的点击范围更大。竖屏时技能排成网格，
+横屏时棋盘在左、技能栏在右。3D 视图可双指缩放。**全屏**按钮会隐藏菜单栏；安卓和电脑上
+使用浏览器的真正全屏并尝试锁定横屏，iPhone 不支持网页全屏，因此改用沉浸模式 —— 想在
+iPhone 上真正全屏，请用「分享 → 添加到主屏幕」。
 
 **七项技能**：上行链路（攀墙）、缓冲区（安全落地）、溢出（原地崩溃并炸出洞）、
 防火墙（挡回数据包）、网桥（搭台阶）、隧道（横向挖掘）、管道（向下挖掘）。
