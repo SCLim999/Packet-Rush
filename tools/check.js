@@ -49,6 +49,11 @@ const SOLUTIONS = {
   ],
   routing: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(id => ({ id, route: 0, when: p => p.state === "fall" })),
   congestion: [{ rate: 36 }],
+  keepalive: [{ id: 0, skill: "firewall", when: p => walking(-1)(p) && p.x <= 18 }],
+  fibre: [
+    { id: 0, skill: "bridge", when: p => walking(1)(p) && p.x >= 117 },
+    { id: 0, skill: "bridge", when: p => walking(1)(p) && p.x >= 240 }
+  ],
   stack: [
     { id: 0, skill: "bridge", when: p => walking(1)(p) && p.x >= 117 },
     { id: 0, skill: "tunnel", when: p => walking(1)(p) && p.x >= 195 },
@@ -94,6 +99,9 @@ function run(level, script, verbose) {
 const only = process.argv[2] ? Number(process.argv[2]) : null;
 const problems = [];
 
+/* the campaign: every OSI layer has a world with at least one level */
+for (let n = 1; n <= 7; n++) if (!PACKET_LEVELS.some(l => l.world === n)) problems.push(`campaign: OSI layer ${n} has no levels`);
+
 /* the OSI reference: seven layers, each explained in both languages */
 if (OSI_LAYERS.map(l => l.n).join() !== "7,6,5,4,3,2,1") problems.push("OSI: layers must be listed 7 down to 1");
 for (const l of OSI_LAYERS) {
@@ -119,6 +127,7 @@ PACKET_LEVELS.forEach((level, i) => {
   for (const k of Object.keys(level.skills)) {
     if (!SKILLS.some(s => s.id === k)) problems.push(`${tag}: unknown skill "${k}"`);
   }
+  if (!(level.world >= 1 && level.world <= 7) || !(level.osi || []).includes(level.world)) problems.push(`${tag}: world must be one of its own OSI layers`);
   if (!Array.isArray(level.osi) || !level.osi.length || level.osi.some(n => !(n >= 1 && n <= 7))) {
     problems.push(`${tag}: osi must list the OSI layers (1-7) its concept belongs to`);
   }
@@ -152,6 +161,10 @@ PACKET_LEVELS.forEach((level, i) => {
   }
   for (const l of level.links || []) if (!(l.w > 0 && l.h > 0 && l.capacity >= 1) || !inside(l.x, l.y)) problems.push(`${tag}: a link needs a size on the map and a capacity`);
   if (level.rateRange && !(level.rateRange[0] >= 1 && level.rateRange[0] <= level.rate && level.rate <= level.rateRange[1])) problems.push(`${tag}: rateRange must contain the starting rate`);
+  if (level.session) {
+    const se = level.session;
+    if (!se.plate || !se.gate || !(se.timeout > 0) || !inside(se.plate.x, se.plate.y) || !inside(se.gate.x, se.gate.y)) problems.push(`${tag}: a session needs a plate, a gate and a timeout`);
+  }
   for (const sw of level.switches || []) if (!inside(sw.x, sw.y) || Math.abs(sw.dir) !== 1) problems.push(`${tag}: a route switch needs a position and a dir of 1 or -1`);
   if (level.firewallRule !== undefined && level.firewallRule !== "junk") problems.push(`${tag}: unknown firewallRule "${level.firewallRule}"`);
 
@@ -177,6 +190,25 @@ PACKET_LEVELS.forEach((level, i) => {
     console.log(`ok  ${tag.padEnd(22)} delivered ${g.saved}/${level.count} (need ${level.need}) in ${(g.tick / 20).toFixed(1)}s, ${g.used} skills: ★★★; idle run ${idle.saved}/${level.count}`);
   }
 });
+
+/* classroom: quiz questions are always answerable, result codes survive a
+   round trip and reject tampering */
+{
+  const C = require("../js/classroom.js");
+  const { OSI_LAYERS } = require("../js/levels.js");
+  let bad = 0;
+  for (const lv of PACKET_LEVELS) for (let s = 0; s < 100; s++) {
+    const q = C.quizFor(lv, OSI_LAYERS, s * 31 + 7);
+    const labels = q.options.map(o => (q.kind === "pdu" ? o.layer.pdu.en : o.layer.name.en));
+    if (q.options.length !== 3 || new Set(labels).size !== 3 || !q.options.some(o => o.n === q.answer)) bad++;
+  }
+  if (bad) problems.push(`classroom: ${bad} quiz questions have duplicate or missing answers`);
+  const stars = Object.fromEntries(PACKET_LEVELS.map((l, i) => [l.id, i % 4]));
+  const code = C.makeResultCode({ name: "Test 学生", cls: "abc", stars, levels: PACKET_LEVELS, quiz: { right: 3, asked: 4 }, streak: 2, when: 1 });
+  const back = C.readResultCode(code, PACKET_LEVELS);
+  if (back.error || back.name !== "Test 学生" || back.cls !== "ABC" || back.perLevel.join() !== PACKET_LEVELS.map((l, i) => i % 4).join()) problems.push("classroom: result code does not survive a round trip");
+  if (!C.readResultCode(code.slice(0, -1) + (code.endsWith("a") ? "b" : "a"), PACKET_LEVELS).error) problems.push("classroom: a tampered result code was accepted");
+}
 
 if (problems.length) {
   for (const p of problems) console.log("FAIL " + p);

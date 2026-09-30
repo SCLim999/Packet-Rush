@@ -280,7 +280,7 @@ body.view-3d #world { visibility: hidden; }
 .level-card .lv-stars, .ov-stars { color: var(--amber); letter-spacing: 2px; }
 .level-card .lv-stars { display: block; font-size: 14px; margin-top: 2px; }
 .level-card .lv-stars .off, .ov-stars .off { color: var(--line); }
-.ov-stars { font-size: 30px; margin: -4px 0 6px; line-height: 1; }
+.overlay-card .ov-stars { font-size: 30px; margin: -4px 0 6px; line-height: 1; color: var(--amber); }
 .ov-stars:empty { display: none; }
 .ov-stars small { display: block; font-size: 13px; letter-spacing: 0; color: var(--muted); margin-top: 6px; }
 .daily {
@@ -447,6 +447,42 @@ body.pseudo-fs .rush {
     radial-gradient(900px 500px at 110% 10%, var(--glow-2) 0%, transparent 55%),
     var(--bg);
 }
+
+.ov-quiz { max-width: 560px; margin: 0 auto 14px; text-align: left; }
+.ov-quiz:empty { display: none; }
+.ov-quiz h4 { margin: 0 0 6px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--amber); }
+.ov-quiz p { margin: 0 0 8px; color: var(--text); font-size: 14px; }
+.quiz-opts { display: grid; gap: 6px; }
+.quiz-opts .btn { text-align: left; }
+.quiz-opts .btn.right { border-color: var(--green); background: color-mix(in srgb, var(--green) 18%, var(--panel-2)); }
+.quiz-opts .btn.wrong { border-color: var(--red); background: color-mix(in srgb, var(--red) 18%, var(--panel-2)); }
+.quiz-verdict { margin-top: 8px; font-size: 13px; color: var(--muted); }
+.class-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 12px 0; }
+.class-form label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.class-form input, .result-code {
+  font: inherit; font-size: 14px; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+}
+.class-form input:focus, .result-code:focus { outline: none; border-color: var(--cyan); }
+.class-summary { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+.class-summary b { color: var(--text); }
+.code-label { font-size: 13px; color: var(--muted); }
+.result-code { width: 100%; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 12px; word-break: break-all; resize: vertical; margin-top: 4px; }
+.class-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.copy-note { min-height: 1.3em; font-size: 13px; }
+.level-tabs { display: flex; gap: 6px; margin: 12px 0 6px; }
+.level-tab[aria-selected="true"] { border-color: var(--cyan); color: var(--cyan); }
+.level-list.worlds { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.world { border-left: 4px solid var(--layer); padding: 6px 0 2px 10px; }
+.world-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.world-head .num {
+  display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px;
+  background: var(--layer); color: #0b1020; font-weight: 700; font-size: 13px;
+}
+.world-head strong { font-size: 15px; }
+.world-head .sub { font-size: 12px; color: var(--muted); }
+.world-head .wstars { margin-left: auto; font-size: 12px; color: var(--amber); }
+.world-levels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
 
 /* level cards: badge, name, best and stars stacked */
 .level-card { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 92px; }

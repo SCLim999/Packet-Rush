@@ -29,6 +29,15 @@ const TEXT = {
     "ctl.pause": "Pause", "ctl.resume": "Resume", "ctl.fast": "Fast", "ctl.restart": "Restart", "ctl.nuke": "kill -9",
     "ctl.nukeConfirm": "Press again to end the run",
     "levels.title": "Levels", "levels.sub": "Deliver enough packets to unlock the next network.",
+    "btn.class": "Class",
+    "quiz.title": "Quick check", "quiz.layer": "Which OSI layer is the idea behind “{level}” on?",
+    "quiz.pdu": "At layer {n}, {name}, what is the unit of data called?", "quiz.job": "Which layer does this job? “{job}”",
+    "quiz.right": "Right!", "quiz.wrong": "Not quite — it is {answer}.", "quiz.tally": "Quiz score: {right}/{asked}",
+    "class.title": "Classroom", "class.sub": "Enter your name and the class code your teacher gave you. When your teacher asks, copy your result code and send it to them — no account, nothing uploaded.",
+    "class.name": "Your name", "class.code": "Class code", "class.result": "Your result code", "class.copy": "Copy result code",
+    "class.teacher": "Teacher page", "class.copied": "Copied — paste it wherever your teacher asked.", "class.copyFail": "Could not copy automatically — the code is selected, copy it yourself.",
+    "class.needName": "Type your name first.", "class.stars": "Stars", "class.cleared": "Levels cleared", "class.quiz": "Quiz", "class.streak": "Daily streak",
+    "levels.byLayer": "By OSI layer", "levels.inOrder": "In order", "levels.worldStars": "★ {n}/{max}",
     "levels.best": "best {n}/{count}", "levels.none": "not delivered yet", "levels.locked": "locked",
     "ov.intro": "Level {n} — {name}", "ov.start": "Start",
     "ov.goal": "Release {count} packets · deliver at least {need}",
@@ -44,6 +53,7 @@ const TEXT = {
     "loss.short": "shorted on a live wire", "loss.overflow": "overflowed",
     "loss.ttl": "TTL expired", "loss.firewall": "stayed on as a firewall",
     "loss.mitm": "intercepted by a man in the middle", "loss.refused": "refused by the overloaded server",
+    "loss.timeout": "timed out at a closed session", "fx.timeout": "session timed out",
     "hud.skills": "Skills", "loss.misrouted": "delivered to the wrong address", "loss.congestion": "dropped by a congested link",
     "ctl.rate": "Release every",
     "stars.need2": "Deliver {n} packets for ★★.", "stars.need3": "Use {n} skill(s) or fewer for ★★★.", "stars.all": "Perfect — every star earned.",
@@ -94,6 +104,15 @@ const TEXT = {
     "ctl.pause": "暂停", "ctl.resume": "继续", "ctl.fast": "快进", "ctl.restart": "重来", "ctl.nuke": "kill -9",
     "ctl.nukeConfirm": "再按一次结束本局",
     "levels.title": "关卡", "levels.sub": "送达足够的数据包即可解锁下一个网络。",
+    "btn.class": "班级",
+    "quiz.title": "小测验", "quiz.layer": "“{level}”背后的知识点属于 OSI 的哪一层？",
+    "quiz.pdu": "第 {n} 层（{name}）的数据单位叫什么？", "quiz.job": "哪一层负责这项工作？“{job}”",
+    "quiz.right": "答对了！", "quiz.wrong": "不对哦 —— 答案是{answer}。", "quiz.tally": "测验得分：{right}/{asked}",
+    "class.title": "课堂", "class.sub": "输入你的名字和老师给的班级代码。老师需要时，复制你的成绩码发给老师 —— 无需注册，不上传任何数据。",
+    "class.name": "你的名字", "class.code": "班级代码", "class.result": "你的成绩码", "class.copy": "复制成绩码",
+    "class.teacher": "教师页面", "class.copied": "已复制 —— 粘贴到老师指定的地方即可。", "class.copyFail": "无法自动复制 —— 成绩码已选中，请手动复制。",
+    "class.needName": "请先输入你的名字。", "class.stars": "星星", "class.cleared": "已通关", "class.quiz": "测验", "class.streak": "每日连续",
+    "levels.byLayer": "按 OSI 层", "levels.inOrder": "按顺序", "levels.worldStars": "★ {n}/{max}",
     "levels.best": "最佳 {n}/{count}", "levels.none": "尚未送达", "levels.locked": "未解锁",
     "ov.intro": "第 {n} 关 —— {name}", "ov.start": "开始",
     "ov.goal": "发出 {count} 个数据包 · 至少送达 {need} 个",
@@ -109,6 +128,7 @@ const TEXT = {
     "loss.short": "碰到带电导线短路", "loss.overflow": "溢出了",
     "loss.ttl": "TTL 耗尽", "loss.firewall": "留作防火墙",
     "loss.mitm": "被中间人截获", "loss.refused": "被过载的服务器拒绝",
+    "loss.timeout": "在关闭的会话前超时", "fx.timeout": "会话超时",
     "hud.skills": "技能", "loss.misrouted": "送到了错误的地址", "loss.congestion": "被拥塞的链路丢弃",
     "ctl.rate": "发送间隔",
     "stars.need2": "送达 {n} 个数据包可得 ★★。", "stars.need3": "使用不超过 {n} 次技能可得 ★★★。", "stars.all": "完美 —— 拿到了全部星星。",
@@ -156,6 +176,8 @@ let progress;
 try { progress = JSON.parse(store.get("packetrush.progress", "")) || null; } catch (e) { progress = null; }
 if (!progress || typeof progress !== "object") progress = { unlocked: 1, best: {} };
 progress.stars = progress.stars || {};
+progress.quiz = progress.quiz || { right: 0, asked: 0 };
+progress.student = progress.student || { name: "", cls: "" };
 progress.daily = progress.daily || {};
 
 /* ------------------------------------------------------ daily challenge */
@@ -269,6 +291,8 @@ function paintTerrain() {
         const rivet = x % 10 === 2 && y % 10 === 2;
         const seam = x % 20 === 0 || y % 20 === 0;
         c = rivet ? [210, 220, 232] : seam ? pal.steel.map(v => v - 30) : pal.steel;
+      } else if (m === M.GATE) {                          // session gate: violet bars
+        c = x % 3 === 0 ? [196, 181, 253] : [109, 40, 217];
       } else {
         const mortar = y % 2 === 0 && x % 6 === 0;
         c = mortar ? pal.brick.map(v => v - 60) : pal.brick;
@@ -578,6 +602,27 @@ function drawMitm(z) {
 const KIND_COLOR = { tcp: "#93c5fd", udp: "#fdba74" };
 /* destination colours for routed levels: server A, B, C, D */
 const DEST_COLOR = ["#22d3ee", "#f472b6", "#a3e635", "#fbbf24"];
+
+/* The handshake plate and the state of the session it controls. */
+function drawSession(se) {
+  const pl = se.plate, on = se.ticks > 0;
+  ctx.fillStyle = on ? "#a78bfa" : "#4c1d95";
+  ctx.fillRect(pl.x, pl.y - 0.5, pl.w, 1.6);
+  ctx.fillStyle = on ? "rgba(167,139,250,0.25)" : "rgba(76,29,149,0.2)";
+  ctx.fillRect(pl.x, pl.y - 6, pl.w, 5.5);
+  /* countdown ring above the gate */
+  const g = se.gate, cx = g.x + g.w / 2, cy = g.y - 8;
+  ctx.strokeStyle = "rgba(167,139,250,0.35)"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2); ctx.stroke();
+  if (on) {
+    ctx.strokeStyle = "#a78bfa";
+    ctx.beginPath(); ctx.arc(cx, cy, 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * se.ticks / se.timeout); ctx.stroke();
+  }
+  ctx.fillStyle = on ? "#c4b5fd" : "#7c3aed";
+  ctx.font = "bold 4.5px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(on ? "OPEN" : "CLOSED", cx, cy - 6.5);
+}
 
 /* A congestion-prone link: a duct with a load meter. */
 function drawLink(l) {
@@ -921,6 +966,7 @@ function render2D() {
   for (const h of game.hazards) drawHazard(h);
   for (const z of game.mitm) drawMitm(z);
   for (const l of game.links) drawLink(l);
+  if (game.session) drawSession(game.session);
   game.servers.forEach((sv, i) => drawServer(sv, i));
   const hotSwitch = hover && running ? game.switchAt(hover.x, hover.y) : null;
   for (const s of game.switches) drawSwitch(s, s === hotSwitch);
@@ -1086,13 +1132,15 @@ function updateHUD() {
 }
 
 /* ------------------------------------------------------------ overlays */
-function overlay({ title, goal, note, stats, stars, primary, secondary }) {
+function overlay({ title, goal, note, stats, stars, quiz, primary, secondary }) {
   el("ov-title").textContent = title;
   el("ov-goal").innerHTML = goal || "";
   el("ov-note").innerHTML = note ? `<h4>${t("ov.concept")}</h4>${note}` : "";
   renderOsiChips(note ? game.level : null);
   el("ov-stats").innerHTML = stats || "";
   el("ov-stars").innerHTML = stars || "";
+  el("ov-quiz").innerHTML = "";
+  if (quiz) renderQuiz(game.level);
   const btn = (node, spec) => {
     node.style.display = spec ? "" : "none";
     if (spec) { node.textContent = spec[0]; node.onclick = spec[1]; }
@@ -1162,6 +1210,88 @@ function openOsi(focus) {
   if (hit) hit.scrollIntoView({ block: "nearest" });
 }
 
+/* ------------------------------------------------------------ the quiz */
+function renderQuiz(lv) {
+  const box = el("ov-quiz");
+  const q = quizFor(lv, OSI_LAYERS, levelIndex * 7919 + progress.quiz.asked * 104729 + 17);
+  const layer = OSI_LAYERS.find(l => l.n === q.n);
+  const text = q.kind === "layer" ? t("quiz.layer", { level: L(lv.name) })
+    : q.kind === "pdu" ? t("quiz.pdu", { n: q.n, name: L(layer.name) })
+    : t("quiz.job", { job: L(layer.job) });
+  const label = o => (q.kind === "pdu" ? L(o.layer.pdu) : `${o.n} · ${L(o.layer.name)}`);
+  box.innerHTML = `<h4>${t("quiz.title")}</h4><p>${text}</p>`;
+  const opts = document.createElement("div");
+  opts.className = "quiz-opts";
+  const verdict = document.createElement("div");
+  verdict.className = "quiz-verdict";
+  let answered = false;
+  for (const o of q.options) {
+    const b = document.createElement("button");
+    b.className = "btn";
+    b.textContent = label(o);
+    b.onclick = () => {
+      if (answered) return;
+      answered = true;
+      const right = o.n === q.answer;
+      progress.quiz.asked++;
+      if (right) progress.quiz.right++;
+      store.set("packetrush.progress", JSON.stringify(progress));
+      for (const other of opts.children) {
+        if (other === b) other.classList.add(right ? "right" : "wrong");
+        if (other.dataset.n === String(q.answer)) other.classList.add("right");
+        other.disabled = true;
+      }
+      const ans = q.options.find(x => x.n === q.answer);
+      verdict.textContent = (right ? t("quiz.right") : t("quiz.wrong", { answer: label(ans) })) + " · "
+        + t("quiz.tally", { right: progress.quiz.right, asked: progress.quiz.asked });
+      beep(right ? 880 : 200, 120, "triangle", 0.04, right ? 200 : -60);
+    };
+    b.dataset.n = o.n;
+    opts.append(b);
+  }
+  box.append(opts, verdict);
+}
+
+/* -------------------------------------------------------------- the class */
+function resultCode() {
+  return makeResultCode({
+    name: progress.student.name, cls: progress.student.cls, stars: progress.stars, levels: PACKET_LEVELS,
+    quiz: progress.quiz, streak: dailyStreak(), when: Math.floor(Date.now() / 1000)
+  });
+}
+function refreshClass() {
+  const total = PACKET_LEVELS.reduce((a, l) => a + (progress.stars[l.id] || 0), 0);
+  const cleared = PACKET_LEVELS.filter(l => progress.stars[l.id]).length;
+  el("class-summary").innerHTML = `<span>${t("class.stars")} <b>${total}/${PACKET_LEVELS.length * 3}</b></span>`
+    + `<span>${t("class.cleared")} <b>${cleared}/${PACKET_LEVELS.length}</b></span>`
+    + `<span>${t("class.quiz")} <b>${progress.quiz.right}/${progress.quiz.asked}</b></span>`
+    + `<span>${t("class.streak")} <b>${dailyStreak()}</b></span>`;
+  el("result-code").value = progress.student.name.trim() ? resultCode() : "";
+  el("result-code").placeholder = t("class.needName");
+}
+function openClass() {
+  el("student-name").value = progress.student.name;
+  el("class-code").value = progress.student.cls;
+  el("copy-note").textContent = "";
+  refreshClass();
+  el("class-dialog").showModal();
+}
+for (const id of ["student-name", "class-code"]) {
+  el(id).addEventListener("input", () => {
+    progress.student = { name: el("student-name").value, cls: el("class-code").value.toUpperCase() };
+    store.set("packetrush.progress", JSON.stringify(progress));
+    refreshClass();
+  });
+}
+el("btn-copy-code").onclick = () => {
+  const box = el("result-code");
+  if (!box.value) { el("copy-note").textContent = t("class.needName"); el("student-name").focus(); return; }
+  const fallback = () => { box.focus(); box.select(); el("copy-note").textContent = t("class.copyFail"); };
+  try {
+    navigator.clipboard.writeText(box.value).then(() => { el("copy-note").textContent = t("class.copied"); }, fallback);
+  } catch (e) { fallback(); }
+};
+
 function showIntro() {
   const lv = game.level;
   overlay({
@@ -1204,6 +1334,7 @@ function showResult() {
       note: L(lv.note),
       stats,
       stars: starsHtml,
+      quiz: true,
       primary: last ? [t("ov.replay"), () => startLevel(levelIndex)] : [t("ov.next"), () => startLevel(levelIndex + 1)],
       secondary: last ? [t("ov.levels"), openLevels] : [t("ov.replay"), () => startLevel(levelIndex)]
     });
@@ -1274,6 +1405,10 @@ function drainEvents() {
         beep(520, 40, "square", 0.03, 120);
         break;
       case "junkin": beep(200, 40, "square", 0.02); break;
+      case "session": beep(760, 40, "triangle", 0.025, 160); break;
+      case "timeout":
+        effects.push({ kind: "text", text: t("fx.timeout"), x: game.session.gate.x, y: game.session.gate.y - 18, life: 40, color: "#c4b5fd" });
+        break;
       case "junkdown": burst(e.x, e.y - 4, ["#fca5a5", "#7f1d1d"], 6); break;
       case "boom":
         beep(90, 250, "sawtooth", 0.06, -40);
@@ -1537,23 +1672,48 @@ function renderDaily() {
   }
 }
 
+let levelView = store.get("packetrush.levelView", "layers");
+function levelCard(lv, i) {
+  const b = document.createElement("button");
+  const locked = i + 1 > progress.unlocked;
+  b.className = "level-card" + (locked ? " locked" : "");
+  const best = progress.best[lv.id], st = progress.stars[lv.id] || 0;
+  b.innerHTML = `<span class="pill">${t("hud.level", { n: i + 1 })}</span><strong>${L(lv.name)}</strong>`
+    + `<span class="lv-best">${locked ? t("levels.locked") : best ? t("levels.best", { n: best, count: lv.count }) : t("levels.none")}</span>`
+    + (locked ? "" : `<span class="lv-stars" aria-label="${st}/3">${starText(st)}</span>`);
+  b.disabled = locked;
+  b.onclick = () => { el("levels-dialog").close(); startLevel(i); };
+  return b;
+}
+
 function openLevels() {
   renderDaily();
+  el("tab-layers").setAttribute("aria-selected", String(levelView === "layers"));
+  el("tab-order").setAttribute("aria-selected", String(levelView !== "layers"));
   const list = el("level-list");
   list.innerHTML = "";
-  PACKET_LEVELS.forEach((lv, i) => {
-    const b = document.createElement("button");
-    const locked = i + 1 > progress.unlocked;
-    b.className = "level-card" + (locked ? " locked" : "");
-    const best = progress.best[lv.id], st = progress.stars[lv.id] || 0;
-    b.innerHTML = `<span class="pill">${t("hud.level", { n: i + 1 })}</span><strong>${L(lv.name)}</strong>`
-      + `<span class="lv-best">${locked ? t("levels.locked") : best ? t("levels.best", { n: best, count: lv.count }) : t("levels.none")}</span>`
-      + (locked ? "" : `<span class="lv-stars" aria-label="${st}/3">${starText(st)}</span>`);
-    b.disabled = locked;
-    b.onclick = () => { el("levels-dialog").close(); startLevel(i); };
-    list.append(b);
-  });
-  el("levels-dialog").showModal();
+  list.classList.toggle("worlds", levelView === "layers");
+  if (levelView === "layers") {
+    /* seven worlds, climbing the stack from the wire to the application */
+    for (let n = 1; n <= 7; n++) {
+      const layer = OSI_LAYERS.find(l => l.n === n), levels = PACKET_LEVELS.map((lv, i) => [lv, i]).filter(([lv]) => lv.world === n);
+      const earned = levels.reduce((a, [lv]) => a + (progress.stars[lv.id] || 0), 0);
+      const w = document.createElement("section");
+      w.className = "world";
+      w.style.setProperty("--layer", OSI_COLORS[n]);
+      w.innerHTML = `<div class="world-head"><span class="num">${n}</span><strong>${L(layer.name)}</strong>`
+        + `<span class="sub">${L(layer.job)}</span><span class="wstars">${t("levels.worldStars", { n: earned, max: levels.length * 3 })}</span></div>`;
+      const grid = document.createElement("div");
+      grid.className = "world-levels";
+      for (const [lv, i] of levels) grid.append(levelCard(lv, i));
+      w.append(grid);
+      list.append(w);
+    }
+    if (!el("levels-dialog").open) el("levels-dialog").showModal();
+    return;
+  }
+  PACKET_LEVELS.forEach((lv, i) => list.append(levelCard(lv, i)));
+  if (!el("levels-dialog").open) el("levels-dialog").showModal();
 }
 
 function buildHelp() {
@@ -1612,6 +1772,8 @@ el("theme-pick").onchange = ev => {
   ev.target.blur();                      // hand the keyboard back to the game
 };
 el("btn-levels").onclick = openLevels;
+el("tab-layers").onclick = () => { levelView = "layers"; store.set("packetrush.levelView", levelView); openLevels(); };
+el("tab-order").onclick = () => { levelView = "order"; store.set("packetrush.levelView", levelView); openLevels(); };
 el("backdrop-pick").onchange = ev => {
   backdrop = ev.target.value;
   store.set("packetrush.backdrop", backdrop);
@@ -1621,6 +1783,7 @@ el("backdrop-pick").onchange = ev => {
 };
 el("btn-help").onclick = () => el("help-dialog").showModal();
 el("btn-osi").onclick = () => openOsi(null);
+el("btn-class").onclick = openClass;
 
 /* ---------------------------------------------------------------- boot */
 applyTheme();

@@ -12,7 +12,7 @@
 
 const LW = 400, LH = 200;
 const TICK_HZ = 20;
-const M = { EMPTY: 0, DIRT: 1, STEEL: 2, BRICK: 3 };
+const M = { EMPTY: 0, DIRT: 1, STEEL: 2, BRICK: 3, GATE: 4 };
 
 const SAFE_FALL = 56;             // further than this without a buffer corrupts the packet
 const BUFFER_OPENS = 12;          // a buffer slows the fall after this many pixels
@@ -31,7 +31,7 @@ const LOAD_DECAY_TICKS = 5 * TICK_HZ;  // the server sheds one unit of junk load
 const PACKET_KINDS = { T: "tcp", U: "udp" };
 /* Losses TCP recovers from. A firewall, an overflow or the clock are not
    the network dropping a packet, so they are not retransmitted. */
-const RETRANSMIT_ON = ["splat", "void", "short", "mitm", "refused", "congestion"];
+const RETRANSMIT_ON = ["splat", "void", "short", "mitm", "refused", "congestion", "timeout"];
 /* Congestion: a level may mark narrow `links`, each with a capacity. A packet
    that enters a link already carrying that many packets is dropped. A level
    with a `rateRange` lets the player slow the router down or speed it up
@@ -93,6 +93,43 @@ class PacketGame {
     /* congestion */
     this.links = (level.links || []).map(l => ({ ...l, load: 0 }));
     this.drops = 0;
+    /* sessions: a gate that stays open only while the session is alive. A
+       packet crossing the handshake plate (re)starts the session; after
+       `timeout` ticks without one it closes. */
+    this.session = level.session ? { ...level.session, ticks: 0, open: true } : null;
+    if (this.session) this.setGate(false);
+  }
+
+  setGate(open) {
+    const s = this.session, g = s.gate;
+    for (let y = g.y; y < g.y + g.h; y++) for (let x = g.x; x < g.x + g.w; x++) {
+      if (x >= 0 && x < LW && y >= 0 && y < LH) this.map[y * LW + x] = open ? M.EMPTY : M.GATE;
+    }
+    s.open = open;
+    this.dirty = true;
+  }
+
+  stepSession() {
+    const s = this.session, pl = s.plate;
+    for (const p of this.packets) {
+      /* traffic heading for the gate opens a session; a packet standing on the
+         plate (a firewall, a crash) is a keep-alive and holds it open */
+      const standing = p.state === "block" || p.state === "crash";
+      if (p.alive && !p.junk && p.x >= pl.x && p.x < pl.x + pl.w && Math.abs(p.y - pl.y) <= 2 &&
+          (standing || !pl.dir || p.dir === pl.dir)) {
+        if (s.ticks === 0) this.events.push({ type: "session" });
+        s.ticks = s.timeout;
+      }
+    }
+    if (s.ticks > 0) s.ticks--;
+    const want = s.ticks > 0;
+    if (want && !s.open) this.setGate(true);
+    if (!want && s.open) {
+      /* never close on a packet standing in the doorway */
+      const g = s.gate;
+      const busy = this.packets.some(p => p.alive && p.x >= g.x - 3 && p.x < g.x + g.w + 3 && p.y >= g.y && p.y - 8 < g.y + g.h);
+      if (!busy) { this.setGate(false); this.events.push({ type: "timeout" }); }
+    }
   }
 
   setRate(r) {
@@ -144,7 +181,7 @@ class PacketGame {
   carve(x, y) {
     if (x < 0 || x >= LW || y < 0 || y >= LH) return false;
     const i = y * LW + x, v = this.map[i];
-    if (v === M.STEEL) return true;
+    if (v === M.STEEL || v === M.GATE) return true;
     if (v !== M.EMPTY) { this.map[i] = M.EMPTY; this.dirty = true; }
     return false;
   }
@@ -240,6 +277,7 @@ class PacketGame {
     if (this.downTicks > 0 && --this.downTicks === 0) this.events.push({ type: "up" });
     if (this.load > 0 && this.tick % LOAD_DECAY_TICKS === 0) this.load--;
 
+    if (this.session) this.stepSession();
     for (const p of this.packets) if (p.alive) this.update(p);
     if (this.links.length) this.checkLinks();
 
@@ -342,6 +380,11 @@ class PacketGame {
       for (const z of this.mitm) {
         if (p.x >= z.x && p.x < z.x + z.w && p.y >= z.y && p.y < z.y + z.h) { this.kill(p, "mitm"); return; }
       }
+    }
+    /* a packet reaching a closed session gate has timed out */
+    if (this.session && !this.session.open && !p.junk) {
+      const g = this.session.gate;
+      if (p.x + p.dir * 2 >= g.x && p.x + p.dir * 2 < g.x + g.w && p.y >= g.y && p.y - 4 < g.y + g.h) { this.kill(p, "timeout"); return; }
     }
     /* route switches point walking packets the way they are set */
     for (let i = 0; i < this.switches.length; i++) {

@@ -7,7 +7,8 @@
 that short out any packet touching them, `rate` is the number of
    ticks between releases (20 ticks = one second), `ttl` is the time limit in
    seconds. `par` sets the stars: saved = packets for two stars, skills = the
-   most skills for three, time = seconds allowed in the daily challenge. Every level is proven winnable by tools/check.js.
+   most skills for three, time = seconds allowed in the daily challenge.
+   `world` is the OSI layer whose world the level belongs to in the campaign. Every level is proven winnable by tools/check.js.
    ========================================================================== */
 
 const STEEL = 2;
@@ -92,6 +93,7 @@ const OSI_EXTRA = {
 const PACKET_LEVELS = [
   {
     id: "drop",
+    world: 3,
     osi: [3],
     osiWhy: {
       en: "A <b>packet</b> is the unit of data at the Network layer: it carries the source and destination IP addresses that routers read.",
@@ -120,6 +122,7 @@ const PACKET_LEVELS = [
   },
   {
     id: "firewall",
+    world: 4,
     osi: [3, 4],
     osiWhy: {
       en: "A basic packet-filtering firewall decides using the Network layer (IP addresses) and the Transport layer (TCP/UDP ports).",
@@ -146,6 +149,7 @@ const PACKET_LEVELS = [
   },
   {
     id: "bridge",
+    world: 2,
     osi: [2],
     osiWhy: {
       en: "Bridges and switches work at the Data Link layer: they forward <b>frames</b> by MAC address and never look at IP addresses.",
@@ -172,6 +176,7 @@ const PACKET_LEVELS = [
   },
   {
     id: "tunnel",
+    world: 3,
     osi: [3, 6],
     osiWhy: {
       en: "An IPsec VPN tunnels whole packets inside other packets at the Network layer; the encryption itself is a Presentation-layer job in OSI terms.",
@@ -199,6 +204,7 @@ const PACKET_LEVELS = [
   },
   {
     id: "uplink",
+    world: 4,
     osi: [4],
     osiWhy: {
       en: "Buffering and <b>flow control</b> belong to the Transport layer: TCP keeps a receive buffer and tells the sender how much more it can take.",
@@ -226,6 +232,7 @@ const PACKET_LEVELS = [
   },
   {
     id: "overflow",
+    world: 7,
     osi: [7],
     osiWhy: {
       en: "Buffer overflows are bugs in program code, so attacks on them usually arrive through the Application layer — a crafted request to a web or mail server.",
@@ -254,6 +261,7 @@ const PACKET_LEVELS = [
   },
   {
     id: "stack",
+    world: 7,
     osi: [1, 2, 3, 4, 5, 6, 7],
     osiWhy: {
       en: "This level uses the whole stack: every one of the seven OSI layers has to do its job for a single web page to load.",
@@ -285,6 +293,7 @@ const PACKET_LEVELS = [
   },
   {
     id: "besteffort",
+    world: 4,
     osi: [4],
     osiWhy: {
       en: "TCP and UDP are the two Transport-layer protocols: TCP numbers and acknowledges every segment and resends what goes missing; UDP just sends.",
@@ -312,6 +321,7 @@ const PACKET_LEVELS = [
   },
   {
     id: "mitm",
+    world: 6,
     osi: [3, 6],
     osiWhy: {
       en: "The attacker listens on the network path (layer 3). Encryption — a Presentation-layer job, delivered by a VPN tunnel or TLS — is what makes the stolen data useless.",
@@ -341,6 +351,7 @@ const PACKET_LEVELS = [
   },
   {
     id: "ddos",
+    world: 7,
     osi: [3, 4, 7],
     osiWhy: {
       en: "Floods hit several layers: volumetric floods fill the link (3), SYN floods exhaust connections (4) and HTTP floods swamp the web server itself (7).",
@@ -373,6 +384,7 @@ const PACKET_LEVELS = [
   },
   {
     id: "routing",
+    world: 3,
     osi: [3],
     osiWhy: {
       en: "Routing is the Network layer's job: a router reads each packet's destination IP address and forwards it out of the right interface.",
@@ -405,6 +417,7 @@ const PACKET_LEVELS = [
   },
   {
     id: "congestion",
+    world: 4,
     osi: [4],
     osiWhy: {
       en: "Congestion control lives in the Transport layer: TCP watches for lost segments and slows its sending rate until the network can keep up.",
@@ -430,6 +443,64 @@ const PACKET_LEVELS = [
     note: {
       en: "When more traffic arrives than a link can carry, routers queue it and then start dropping packets: <b>congestion</b>. TCP treats every loss as a signal to slow down, then speeds up gently while things go well — <b>congestion control</b>, which is why the Internet does not grind to a halt at peak time.",
       zh: "当到达的流量超过链路的承载能力时，路由器先排队，然后开始丢包 —— 这就是<b>拥塞</b>。TCP 把每一次丢包都当作减速的信号，一切顺利时再慢慢加速 —— 这就是<b>拥塞控制</b>，也是互联网在高峰期不会瘫痪的原因。"
+    }
+  },
+  {
+    id: "keepalive",
+    world: 5,
+    osi: [5],
+    osiWhy: {
+      en: "The Session layer opens, maintains and closes conversations between two applications — including deciding when an idle one has timed out.",
+      zh: "会话层负责建立、维持和关闭两个应用程序之间的会话 —— 包括判断空闲的会话何时超时。"
+    },
+    name: { en: "Keep-Alive", zh: "保持连接" },
+    count: 10, need: 8, rate: 50, ttl: 90,
+    par: { saved: 9, skills: 1, time: 60 },
+    hatch: { x: 150, y: 95, dir: -1 },
+    exit: { x: 350, y: 139 },
+    skills: { firewall: 1 },
+    session: { plate: { x: 2, y: 139, w: 26, dir: 1 }, gate: { x: 300, y: 100, w: 6, h: 40 }, timeout: 20 },
+    terrain: [
+      { x: 0, y: 140, w: 400, h: 20 },
+      { x: 0, y: 160, w: 400, h: 40, m: STEEL },
+      { x: 290, y: 60, w: 26, h: 40, m: STEEL }
+    ],
+    goal: {
+      en: "The <b>session gate</b> opens when a packet crosses the <b>handshake plate</b> on the far left — but the session times out after one second, long before anyone reaches the gate, and a packet arriving at a closed gate is dropped. Post a <b>Firewall</b> on the plate: standing there, it is a keep-alive that holds the session open.",
+      zh: "数据包经过最左边的<b>握手板</b>时，<b>会话门</b>就会打开 —— 但会话一秒后就超时，远不够数据包走到门前，而到达关闭的门前的数据包会被丢弃。在握手板上安排一道<b>防火墙</b>：它站在那里就是一个保活信号，让会话一直保持打开。"
+    },
+    note: {
+      en: "A <b>session</b> is a conversation between two programs that has a beginning, a middle and an end. Idle sessions <b>time out</b> to free up resources, so long-lived connections send small <b>keep-alive</b> messages — a heartbeat that says “still here” — to stop the other side from closing the door.",
+      zh: "<b>会话</b>是两个程序之间有开始、有过程、有结束的一次对话。空闲的会话会<b>超时</b>以释放资源，所以长连接会定期发送小小的<b>保活</b>消息 —— 一种表示“我还在”的心跳 —— 防止对方把门关上。"
+    }
+  },
+  {
+    id: "fibre",
+    world: 1,
+    osi: [1],
+    osiWhy: {
+      en: "Cables, connectors and the signals on them — and everything that can go wrong with them, like cuts and interference — are the Physical layer.",
+      zh: "线缆、接口以及线路上的信号 —— 还有它们可能出的问题，比如断线和干扰 —— 都属于物理层。"
+    },
+    name: { en: "Fibre Cut", zh: "光纤断裂" },
+    count: 10, need: 7, rate: 80, ttl: 120,
+    par: { saved: 10, skills: 2, time: 69 },
+    types: "T",
+    hatch: { x: 40, y: 85 },
+    exit: { x: 350, y: 129 },
+    skills: { bridge: 3 },
+    hazards: [{ x: 250, y: 126, w: 14, h: 4 }],
+    terrain: [
+      { x: 0, y: 130, w: 120, h: 20 },
+      { x: 140, y: 130, w: 260, h: 20 }
+    ],
+    goal: {
+      en: "A digger has cut the cable, and further on a live wire is throwing out <b>interference</b>. <b>Bridge</b> the cut, then build a second bridge up and over the interference so the packets land clear of it.",
+      zh: "挖掘机挖断了线缆，前方还有一根带电导线在产生<b>干扰</b>。先用<b>网桥</b>跨过断口，再搭第二座桥从干扰上方越过，让数据包安全落在另一边。"
+    },
+    note: {
+      en: "The <b>Physical layer</b> is the actual medium: voltages on copper, pulses of light in <b>fibre</b>, radio waves in Wi-Fi. Its failures are physical too — a cable cut by a digger, <b>interference</b> from nearby power lines, a signal that fades over distance until a <b>repeater</b> boosts it.",
+      zh: "<b>物理层</b>就是实际的传输介质：铜线上的电压、<b>光纤</b>中的光脉冲、Wi-Fi 的无线电波。它的故障也是物理性的 —— 被挖掘机挖断的线缆、附近电线造成的<b>干扰</b>、随距离衰减的信号，需要<b>中继器</b>来放大。"
     }
   }
 ];

@@ -43,6 +43,7 @@
       <option value="datacentre">Data centre</option>
     </select>
     <button id="btn-osi" class="btn" data-t="btn.osi">OSI model</button>
+    <button id="btn-class" class="btn" data-t="btn.class">Class</button>
     <button id="btn-help" class="btn" data-t="btn.help">How to play</button>
   </div>
 </header>
@@ -76,6 +77,7 @@
         <p id="ov-goal"></p>
         <div id="ov-note" class="ov-note"></div>
         <div id="ov-osi" class="ov-osi"></div>
+        <div id="ov-quiz" class="ov-quiz"></div>
         <p id="ov-stars" class="ov-stars" aria-live="polite"></p>
         <div id="ov-stats" class="ov-stats"></div>
         <div class="overlay-buttons">
@@ -111,6 +113,10 @@
   <h2 data-t="levels.title">Levels</h2>
   <p class="muted" data-t="levels.sub">Deliver enough packets to unlock the next network.</p>
   <div id="daily" class="daily"></div>
+  <div class="level-tabs" role="tablist">
+    <button id="tab-layers" class="btn level-tab" role="tab" data-t="levels.byLayer">By OSI layer</button>
+    <button id="tab-order" class="btn level-tab" role="tab" data-t="levels.inOrder">In order</button>
+  </div>
   <div id="level-list" class="level-list"></div>
   <form method="dialog"><button class="btn" data-t="btn.close">Close</button></form>
 </dialog>
@@ -125,6 +131,24 @@
   <div id="tcpip-extra" class="osi-extra"></div>
   <div class="osi-source"><span data-t="osi.source">Background reading:</span><ul id="osi-links"></ul></div>
   <form method="dialog"><button class="btn" data-t="btn.close">Close</button></form>
+</dialog>
+
+<dialog id="class-dialog" class="class-dialog">
+  <h2 data-t="class.title">Classroom</h2>
+  <p class="muted" data-t="class.sub">Enter your name and the class code your teacher gave you. When your teacher asks, copy your result code and send it to them — no account, nothing uploaded.</p>
+  <div class="class-form">
+    <label for="student-name"><span data-t="class.name">Your name</span><input id="student-name" autocomplete="name" maxlength="40"></label>
+    <label for="class-code"><span data-t="class.code">Class code</span><input id="class-code" autocomplete="off" maxlength="20"></label>
+  </div>
+  <div id="class-summary" class="class-summary"></div>
+  <label class="code-label" for="result-code" data-t="class.result">Your result code</label>
+  <textarea id="result-code" class="result-code" rows="3" readonly></textarea>
+  <div class="class-actions">
+    <button id="btn-copy-code" class="btn btn-primary" data-t="class.copy">Copy result code</button>
+    <a class="btn" href="teacher.html" data-t="class.teacher">Teacher page</a>
+    <form method="dialog"><button class="btn" data-t="btn.close">Close</button></form>
+  </div>
+  <p id="copy-note" class="muted copy-note"></p>
 </dialog>
 
 <dialog id="help-dialog">
@@ -145,6 +169,7 @@
 <script src="js/levels.js"></script>
 <script src="js/backdrop.js"></script>
 <script src="js/layers.js"></script>
+<script src="js/classroom.js"></script>
 <script src="js/render3d.js"></script>
 <script src="js/main.js"></script>
 </body>

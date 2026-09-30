@@ -122,7 +122,7 @@ function createRenderer3D(canvas) {
   const shade = (c, k) => c.map(v => Math.min(1, v * k));
 
   /* ---------------------------------------------------------- terrain */
-  const CELL = 2, DEPTH = { 1: 30, 2: 34, 3: 12 };
+  const CELL = 2, DEPTH = { 1: 30, 2: 34, 3: 12, 4: 26 };
   function buildTerrain(game, pal, bands) {
     terrain.n = 0;
     const map = game.map;
@@ -130,12 +130,12 @@ function createRenderer3D(canvas) {
     const kind = new Uint8Array(cw * ch);
     for (let cy = 0; cy < ch; cy++) {
       for (let cx = 0; cx < cw; cx++) {
-        const counts = [0, 0, 0, 0];
+        const counts = [0, 0, 0, 0, 0];
         for (let dy = 0; dy < CELL; dy++) for (let dx = 0; dx < CELL; dx++) {
           counts[map[(cy * CELL + dy) * LW + cx * CELL + dx]]++;
         }
         if (counts[0] > 2) continue;           // mostly air
-        kind[cy * cw + cx] = counts[3] >= 2 ? 3 : counts[2] >= counts[1] ? 2 : 1;
+        kind[cy * cw + cx] = counts[4] >= 2 ? 4 : counts[3] >= 2 ? 3 : counts[2] >= counts[1] ? 2 : 1;
       }
     }
     const dirt = rgb(pal.dirt), trace = rgb(pal.trace), via = rgb(pal.via), steel = rgb(pal.steel), brick = rgb(pal.brick);
@@ -156,6 +156,8 @@ function createRenderer3D(canvas) {
           c = c.map(v => v + n - 0.035);
         } else if (k === 2) {
           c = (x % 20 < 2 || y % 20 < 2) ? shade(steel, 0.8) : (x % 10 === 2 && y % 10 === 2) ? shade(steel, 1.35) : steel;
+        } else if (k === 4) {                                  // session gate
+          c = x % 4 < 2 ? rgb("#c4b5fd") : rgb("#6d28d9"); glow = 0.35;
         } else {
           c = y % 4 < 2 ? brick : shade(brick, 0.85);
         }
@@ -427,6 +429,11 @@ function createRenderer3D(canvas) {
     const b = objects, lv = game.level;
     router(b, lv.hatch, frame, "#45d0e0");
     if (game.botnet) router(b, game.botnet, frame, "#f87171");
+    /* the handshake plate, lit while the session is alive */
+    if (game.session) {
+      const pl = game.session.plate, on = game.session.ticks > 0;
+      box(b, pl.x, pl.y - 0.5, pl.w, 1.4, 0, 22, rgb(on ? "#a78bfa" : "#4c1d95"), on ? 0.9 : 0.1);
+    }
     /* congested links: a blue duct frame, red when full, with a load meter */
     for (const l of game.links) {
       const full = l.load >= l.capacity, c = rgb(full ? "#f87171" : "#38bdf8");

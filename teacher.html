@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Packet Rush — class results</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/game.css">
+<style>
+  .teacher { max-width: 1080px; margin: 0 auto; padding: 16px; display: grid; gap: 14px; }
+  .teacher section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+  .teacher h2 { font-size: 17px; margin-bottom: 6px; }
+  .teacher p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0 0 10px; }
+  #codes { width: 100%; min-height: 150px; font: 12px ui-monospace, "SFMono-Regular", Menlo, monospace; color: var(--text);
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; resize: vertical; }
+  #codes:focus, #filter:focus { outline: none; border-color: var(--cyan); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+  #filter { font: inherit; font-size: 14px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+  th { font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.lv { text-align: center; color: var(--amber); letter-spacing: 1px; }
+  td.lv.zero { color: var(--line); }
+  .rank { color: var(--muted); }
+  .problems { color: var(--red); font-size: 13px; margin: 8px 0 0; padding-left: 18px; }
+  .summary { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 14px; color: var(--muted); margin-bottom: 10px; }
+  .summary b { color: var(--text); }
+  #csv-note { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body class="rush-bright">
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">&#10033;</span>
+    <div>
+      <h1 data-t="t.title">Class results</h1>
+      <p data-t="t.tagline">Collect your students' Packet Rush result codes and rank the class. Nothing leaves this page.</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button id="btn-lang" class="btn">中文</button>
+    <a class="btn" href="index.html" data-t="t.back">Back to the game</a>
+  </div>
+</header>
+
+<main class="teacher">
+  <section>
+    <h2 data-t="t.pasteTitle">1 · Paste result codes</h2>
+    <p data-t="t.pasteText">Students open <b>Class</b> in the game, type their name and your class code, and copy their result code. Paste all the codes here, one per line — in any order, repeats are fine (the newest code per student wins).</p>
+    <textarea id="codes" spellcheck="false" placeholder="PR1-…"></textarea>
+    <div class="row">
+      <label for="filter" data-t="t.filter">Only class</label>
+      <input id="filter" placeholder="PPS2114-A" maxlength="20">
+      <button id="btn-clear" class="btn" data-t="t.clear">Clear</button>
+    </div>
+    <ul id="problems" class="problems"></ul>
+  </section>
+
+  <section>
+    <h2 data-t="t.tableTitle">2 · Class ranking</h2>
+    <div id="summary" class="summary"></div>
+    <div class="table-wrap"><table id="table"></table></div>
+    <div class="row">
+      <button id="btn-csv" class="btn btn-primary" data-t="t.csv">Copy as CSV</button>
+      <span id="csv-note"></span>
+    </div>
+  </section>
+</main>
+
+<footer class="foot" data-t="t.foot">Result codes carry a checksum, so a code that was edited by hand is rejected.</footer>
+
+<script src="js/levels.js"></script>
+<script src="js/classroom.js"></script>
+<script>
+const T = {
+  en: {
+    "t.title": "Class results", "t.tagline": "Collect your students' Packet Rush result codes and rank the class. Nothing leaves this page.",
+    "t.back": "Back to the game", "t.pasteTitle": "1 · Paste result codes",
+    "t.pasteText": "Students open <b>Class</b> in the game, type their name and your class code, and copy their result code. Paste all the codes here, one per line — in any order, repeats are fine (the newest code per student wins).",
+    "t.filter": "Only class", "t.clear": "Clear", "t.tableTitle": "2 · Class ranking", "t.csv": "Copy as CSV",
+    "t.foot": "Result codes carry a checksum, so a code that was edited by hand is rejected.",
+    "t.rank": "#", "t.name": "Student", "t.class": "Class", "t.stars": "Stars", "t.cleared": "Cleared", "t.quiz": "Quiz", "t.streak": "Streak", "t.updated": "Updated",
+    "t.students": "Students", "t.avgStars": "Average stars", "t.avgQuiz": "Average quiz", "t.none": "Paste codes above to see the class.",
+    "t.line": "Line {n}: {error}", "t.copied": "Copied — paste into a spreadsheet.", "t.copyFail": "Could not copy automatically."
+  },
+  zh: {
+    "t.title": "班级成绩", "t.tagline": "收集学生的数据包大冲关成绩码并为全班排名。所有数据都只留在本页面。",
+    "t.back": "返回游戏", "t.pasteTitle": "1 · 粘贴成绩码",
+    "t.pasteText": "学生在游戏中打开<b>班级</b>，输入名字和你的班级代码，然后复制成绩码。把所有成绩码粘贴到这里，每行一个 —— 顺序不限，可以重复（每位学生以最新的成绩码为准）。",
+    "t.filter": "仅显示班级", "t.clear": "清空", "t.tableTitle": "2 · 班级排名", "t.csv": "复制为 CSV",
+    "t.foot": "成绩码带有校验和，手动修改过的成绩码会被拒绝。",
+    "t.rank": "#", "t.name": "学生", "t.class": "班级", "t.stars": "星星", "t.cleared": "通关", "t.quiz": "测验", "t.streak": "连续", "t.updated": "更新时间",
+    "t.students": "学生人数", "t.avgStars": "平均星星", "t.avgQuiz": "平均测验", "t.none": "在上方粘贴成绩码即可查看全班成绩。",
+    "t.line": "第 {n} 行：{error}", "t.copied": "已复制 —— 可粘贴到电子表格。", "t.copyFail": "无法自动复制。"
+  }
+};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage disabled */ } }
+};
+let lang = store.get("bitbuilder.lang", (navigator.language || "en").toLowerCase().startsWith("zh") ? "zh" : "en");
+const t = (k, v) => { let s = T[lang][k] || T.en[k] || k; if (v) for (const [a, b] of Object.entries(v)) s = s.split("{" + a + "}").join(b); return s; };
+const el = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+if (store.get("bitbuilder.theme", "bright") === "dark") document.body.className = "rush-dark";
+let rows = [];
+
+function build() {
+  const lines = el("codes").value.split(/\s+/).map(s => s.trim()).filter(Boolean);
+  const want = el("filter").value.trim().toUpperCase();
+  const problems = [], latest = new Map();
+  lines.forEach((line, i) => {
+    const r = readResultCode(line, PACKET_LEVELS);
+    if (r.error) { problems.push(t("t.line", { n: i + 1, error: r.error })); return; }
+    if (want && r.cls !== want) return;
+    const key = r.name.trim().toLowerCase() + "|" + r.cls;
+    if (!latest.has(key) || latest.get(key).when < r.when) latest.set(key, r);
+  });
+  rows = rankRecords([...latest.values()]);
+  el("problems").innerHTML = problems.map(p => `<li>${esc(p)}</li>`).join("");
+  const n = rows.length;
+  el("summary").innerHTML = n ? `<span>${t("t.students")} <b>${n}</b></span>`
+    + `<span>${t("t.avgStars")} <b>${(rows.reduce((a, r) => a + r.stars, 0) / n).toFixed(1)}/${rows[0].maxStars}</b></span>`
+    + `<span>${t("t.avgQuiz")} <b>${Math.round(100 * rows.reduce((a, r) => a + (r.quizAsked ? r.quizRight / r.quizAsked : 0), 0) / n)}%</b></span>`
+    : `<span>${t("t.none")}</span>`;
+  const head = `<thead><tr><th>${t("t.rank")}</th><th>${t("t.name")}</th><th>${t("t.class")}</th><th class="num">${t("t.stars")}</th>`
+    + `<th class="num">${t("t.cleared")}</th><th class="num">${t("t.quiz")}</th><th class="num">${t("t.streak")}</th>`
+    + PACKET_LEVELS.map((l, i) => `<th class="num" title="${esc(l.name[lang] || l.name.en)}">${i + 1}</th>`).join("")
+    + `<th>${t("t.updated")}</th></tr></thead>`;
+  const body = rows.map((r, i) => `<tr><td class="rank">${i + 1}</td><td>${esc(r.name)}</td><td>${esc(r.cls)}</td>`
+    + `<td class="num">${r.stars}</td><td class="num">${r.cleared}/${PACKET_LEVELS.length}</td>`
+    + `<td class="num">${r.quizRight}/${r.quizAsked}</td><td class="num">${r.streak}</td>`
+    + r.perLevel.map(s => `<td class="lv${s ? "" : " zero"}">${s ? "★".repeat(s) : "·"}</td>`).join("")
+    + `<td>${r.when ? new Date(r.when * 1000).toLocaleString() : ""}</td></tr>`).join("");
+  el("table").innerHTML = head + "<tbody>" + body + "</tbody>";
+  store.set("packetrush.teacher", JSON.stringify({ codes: el("codes").value, filter: el("filter").value }));
+}
+
+function applyText() {
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  for (const n of document.querySelectorAll("[data-t]")) n.innerHTML = t(n.dataset.t);
+  el("btn-lang").textContent = lang === "zh" ? "EN" : "中文";
+  document.title = t("t.title") + " — Packet Rush";
+  build();
+}
+
+el("codes").addEventListener("input", build);
+el("filter").addEventListener("input", build);
+el("btn-clear").onclick = () => { el("codes").value = ""; build(); };
+el("btn-lang").onclick = () => { lang = lang === "zh" ? "en" : "zh"; store.set("bitbuilder.lang", lang); applyText(); };
+el("btn-csv").onclick = () => {
+  const csv = [["rank", "name", "class", "stars", "cleared", "quiz_right", "quiz_asked", "streak", ...PACKET_LEVELS.map(l => l.id)].join(",")]
+    .concat(rows.map((r, i) => [i + 1, `"${r.name.replace(/"/g, '""')}"`, r.cls, r.stars, r.cleared, r.quizRight, r.quizAsked, r.streak, ...r.perLevel].join(",")))
+    .join("\n");
+  try { navigator.clipboard.writeText(csv).then(() => { el("csv-note").textContent = t("t.copied"); }, () => { el("csv-note").textContent = t("t.copyFail"); }); }
+  catch (e) { el("csv-note").textContent = t("t.copyFail"); }
+};
+try { const saved = JSON.parse(store.get("packetrush.teacher", "")); el("codes").value = saved.codes || ""; el("filter").value = saved.filter || ""; } catch (e) { /* first visit */ }
+applyText();
+</script>
+</body>
+</html>
