@@ -77,6 +77,24 @@ unlocks the next one on that browser.
 | 5 | Uplink | Uplink + Buffer | 4 Transport |
 | 6 | Stack Overflow | Overflow | 7 Application |
 | 7 | Full Stack | everything | all seven |
+| 8 | Best Effort | TCP and UDP packets | 4 Transport |
+| 9 | Man in the Middle | an eavesdropper; tunnelling encrypts | 3 Network, 6 Presentation |
+| 10 | Denial of Service | a botnet flood; a filtering firewall | 3, 4, 7 |
+
+### Packet types and enemies
+
+From level 8 on, the network fights back.
+
+| | What it does | The idea behind it |
+|---|---|---|
+| **TCP packet** (blue) | lost once, it is resent from the router two seconds later | TCP acknowledges every segment and retransmits what goes missing |
+| **UDP packet** (orange) | walks twice as fast, never resent | UDP is best effort: fast, no guarantees |
+| **Botnet** (red router) | releases junk packets you cannot command; three reaching the server knock it offline (503) for a few seconds, and real packets arriving then are refused | a DDoS floods a server until it cannot answer real users |
+| **Filtering firewall** | on the DDoS level the firewall drops junk and lets real traffic through | firewall rules filter attack traffic |
+| **Man in the middle** (red zone) | steals any packet crossing it in the open; a packet given Tunnel is encrypted (padlock) and safe, and packets walking through its tunnel never enter the zone | encryption — a VPN tunnel or TLS — defeats eavesdropping |
+
+The status bar shows how many packets were resent and whether the server is
+online. The original seven levels use plain packets and are unchanged.
 
 ### The protocol stack behind the board
 
@@ -171,6 +189,12 @@ iPhone 上真正全屏，请用「分享 → 添加到主屏幕」。
 
 **七项技能**：上行链路（攀墙）、缓冲区（安全落地）、溢出（原地崩溃并炸出洞）、
 防火墙（挡回数据包）、网桥（搭台阶）、隧道（横向挖掘）、管道（向下挖掘）。
+
+**数据包类型与敌人**（第 8 关起）：蓝色 TCP 数据包丢失后会重传一次；橙色 UDP 数据包速度
+快一倍但不会重传。红色路由器是**僵尸网络**，它放出的垃圾包无法指挥，三个进入服务器就会让
+它下线（503），期间到达的真实数据包会被拒绝；拒绝服务关卡中的防火墙带有过滤规则，只拦截
+垃圾包。红色的**中间人**区域会截获任何未加密的数据包 —— 挖隧道的数据包会被加密（锁形
+标志），走隧道的数据包也不会进入该区域。
 
 **学习内容**：每关的关卡卡片都有知识点说明，并标注对应的 OSI 层。**OSI 模型**按钮打开
 参考面板：七层各自的作用、数据单位、示例协议，封装过程，按层划分的攻击，记忆口诀，

@@ -107,6 +107,9 @@ body.rush-excited .logo { color: #170a2b; }
 .hud-stat b { color: var(--text); font-variant-numeric: tabular-nums; margin-left: 4px; }
 #hud-in { color: var(--green); }
 #hud-lost { color: var(--red); }
+#hud-resent { color: #93c5fd; }
+#hud-server.down { color: var(--red); }
+.hud-stat[hidden] { display: none; }
 .pill {
   background: var(--panel-2);
   border: 1px solid var(--line);

@@ -345,7 +345,12 @@ function createRenderer3D(canvas) {
     const x = p.x, y = p.y, f = p.dir;
     const b = b0, box = (bb, px, py, w, h, z, d, c, glow) =>
       push(bb, x + (px + w / 2 - x) * PS, -(y + (py + h / 2 - y) * PS), z * PS, w * PS, h * PS, d * PS, c, glow);
-    const body = rgb(STATE[p.state] || (p.climber || p.floater ? "#a7f3d0" : "#e0f2fe"));
+    const body = rgb(p.junk ? "#fca5a5"
+      : STATE[p.state] || ({ tcp: "#93c5fd", udp: "#fdba74" })[p.kind] || (p.climber || p.floater ? "#a7f3d0" : "#e0f2fe"));
+    if (p.kind === "udp" && p.state === "walk") {             // UDP speed streaks
+      box(b, x - f * 7 - 1.5, y - 7.2, 3, 0.6, 0, 0.6, rgb("#fdba74"), 0.7);
+      box(b, x - f * 8.5 - 1.5, y - 5.2, 3.5, 0.6, 0, 0.6, rgb("#fdba74"), 0.7);
+    }
     const glow = hot ? 0.55 : 0.08;
     const walking = p.state === "walk" || p.state === "bash";
     const step = walking ? [0, 1, 0, -1][(p.anim >> 1) % 4] : 0;
@@ -363,7 +368,17 @@ function createRenderer3D(canvas) {
     box(b, bx, y - 8.5, 7, 6, 0, 5, body, glow);
     box(b, bx + 0.6, y - 8.7, 5.8, 0.6, 0, 5.2, shade(body, 0.7), glow);        // the envelope's lid
     box(b, bx + 1.5, y - 7.6, 4, 0.7, 2.55, 0.2, shade(body, 0.55));             // flap crease on the front
-    box(b, bx + 3.5 + f * 1.6 - 0.55, y - 5.9, 1.1, 1.1, 2.6, 0.3, INK);         // eye, looking ahead
+    if (p.junk) {                                                                 // junk: an X for an eye
+      box(b, bx + 3.5 + f * 1.6 - 0.9, y - 5.9, 1.8, 0.5, 2.6, 0.3, rgb("#7f1d1d"));
+      box(b, bx + 3.5 + f * 1.6 - 0.25, y - 6.55, 0.5, 1.8, 2.6, 0.3, rgb("#7f1d1d"));
+    } else {
+      box(b, bx + 3.5 + f * 1.6 - 0.55, y - 5.9, 1.1, 1.1, 2.6, 0.3, INK);       // eye, looking ahead
+    }
+    if (p.encrypted) {                                                            // padlock
+      box(b, x - 1.8, y - 12.2, 3.6, 2.6, 0, 1.6, rgb("#facc15"), 0.7);
+      box(b, x - 1.1, y - 13.6, 2.2, 1.4, 0, 0.6, rgb("#facc15"), 0.7);
+    }
+    if (p.retry) box(b, bx - 1.8, y - 8.5, 1, 2.2, 0, 1, rgb("#93c5fd"), 0.8);   // resent copy
     if (p.climber) box(b, bx, y - 3.2, 7, 0.8, 0, 5.3, rgb("#4ade80"), 0.6);
 
     if (p.state === "fall" && p.floater && p.fall >= 12) {
@@ -394,19 +409,35 @@ function createRenderer3D(canvas) {
     }
   }
 
-  function scenery(game, frame) {
-    const b = objects, lv = game.level;
-    /* router */
-    const h = lv.hatch;
+  function router(b, h, frame, accent) {
     box(b, h.x - 12, h.y - 14, 24, 9, 0, 14, rgb("#1e293b"));
-    box(b, h.x - 12.2, h.y - 14.2, 24.4, 0.8, 0, 14.4, rgb("#45d0e0"), 0.8);
+    box(b, h.x - 12.2, h.y - 14.2, 24.4, 0.8, 0, 14.4, rgb(accent), 0.8);
     for (let i = 0; i < 4; i++) {
       const on = ((frame >> 3) + i * 3) % 5 < 3;
-      box(b, h.x - 9 + i * 3, h.y - 11, 1.5, 1.5, 7.2, 0.5, rgb(on ? (i % 2 ? "#4ade80" : "#f5a524") : "#334155"), on ? 1 : 0);
+      const c = accent === "#45d0e0" ? (i % 2 ? "#4ade80" : "#f5a524") : accent;
+      box(b, h.x - 9 + i * 3, h.y - 11, 1.5, 1.5, 7.2, 0.5, rgb(on ? c : "#334155"), on ? 1 : 0);
     }
     box(b, h.x - 9, h.y - 19, 1, 5, -4, 1, rgb("#94a3b8"));
     box(b, h.x + 8, h.y - 19, 1, 5, -4, 1, rgb("#94a3b8"));
     box(b, h.x - 5, h.y - 5.6, 10, 1, 0, 8, rgb("#0f172a"));
+  }
+
+  function scenery(game, frame) {
+    const b = objects, lv = game.level;
+    router(b, lv.hatch, frame, "#45d0e0");
+    if (game.botnet) router(b, game.botnet, frame, "#f87171");
+    /* man-in-the-middle zones: a red frame, a scan line and an eye above */
+    for (const z of game.mitm) {
+      const red = rgb("#f87171");
+      box(b, z.x, z.y, z.w, 0.6, 0, 20, red, 0.8);
+      box(b, z.x, z.y + z.h - 0.6, z.w, 0.6, 0, 20, red, 0.5);
+      box(b, z.x, z.y, 0.6, z.h, 0, 20, red, 0.8);
+      box(b, z.x + z.w - 0.6, z.y, 0.6, z.h, 0, 20, red, 0.8);
+      box(b, z.x, z.y + ((frame * 0.6) % z.h), z.w, 0.6, 0, 18, red, 0.6);
+      const cx = z.x + z.w / 2;
+      box(b, cx - 7, z.y - 9, 14, 7, 0, 3, rgb("#1e293b"));
+      box(b, cx - 2 + Math.sin(frame / 25) * 3, z.y - 7.5, 4, 4, 1.6, 0.6, red, 1);
+    }
     /* server */
     const ex = lv.exit;
     box(b, ex.x - 9, ex.y - 22, 18, 23, -4, 18, rgb("#1e293b"));
@@ -416,7 +447,13 @@ function createRenderer3D(canvas) {
       box(b, ex.x + 4, ex.y - 19.5 + i * 3, 1.5, 1, 5.4, 0.3, rgb((frame + i * 7) % 20 < 10 ? "#4ade80" : "#166534"), 1);
     }
     const pulse = 0.55 + 0.35 * Math.sin(frame / 8);
-    box(b, ex.x - 4, ex.y - 11, 8, 12, 0, 6, rgb("#4ade80"), pulse);
+    const down = game.downTicks > 0;
+    box(b, ex.x - 4, ex.y - 11, 8, 12, 0, 6, rgb(down ? "#f87171" : "#4ade80"), down ? (frame % 10 < 5 ? 1 : 0.4) : pulse);
+    if (game.botnet && !down) {
+      for (let i = 0; i < game.server.capacity; i++) {
+        box(b, ex.x - 7 + i * 5, ex.y - 26, 4, 1.5, -4, 3, rgb(i < game.load ? "#fb923c" : "#334155"), i < game.load ? 0.9 : 0);
+      }
+    }
     /* live wires */
     for (const z of game.hazards) {
       box(b, z.x, z.y, z.w, z.h, 0, 30, rgb("#0f172a"));

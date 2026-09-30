@@ -20,6 +20,18 @@ const STEP_UP = 6;                // highest ledge a walker climbs without help
 const BRICKS = 12;                // bricks in one bridge
 const OVERFLOW_TICKS = 5 * TICK_HZ;
 const BLAST = 9;                  // overflow crater radius
+const RETRANSMIT_TICKS = 2 * TICK_HZ;  // a lost TCP packet is resent this long after
+const LOAD_DECAY_TICKS = 5 * TICK_HZ;  // the server sheds one unit of junk load this often
+
+/* Packet types. A level may set `types`, a string cycled over its releases
+   (T = TCP, U = UDP); levels without it release plain packets, which behave
+   exactly as they always have.
+   TCP: lost on the way, it is resent once from the router.
+   UDP: walks twice as fast and is never resent. */
+const PACKET_KINDS = { T: "tcp", U: "udp" };
+/* Losses TCP recovers from. A firewall, an overflow or the clock are not
+   the network dropping a packet, so they are not retransmitted. */
+const RETRANSMIT_ON = ["splat", "void", "short", "mitm", "refused"];
 
 /* The skills, in toolbar order. `on` lists the states a skill can interrupt. */
 const SKILLS = [
@@ -52,6 +64,17 @@ class PacketGame {
     this.state = "playing";                  // playing | won | lost
     this.dirty = true;                       // terrain changed since last render
     this.events = [];                        // sounds and effects for the UI to drain
+
+    this.resent = 0;                         // TCP retransmissions so far
+    this.retx = [];                          // pending retransmissions: { due, id }
+    /* enemies */
+    this.mitm = level.mitm || [];            // zones that steal unencrypted packets
+    this.botnet = level.botnet || null;      // a second router releasing junk traffic
+    this.junkSpawned = 0;
+    this.server = { capacity: 3, down: 6 * TICK_HZ, ...(level.server || {}) };
+    this.load = 0;                           // junk packets the server is choking on
+    this.downTicks = 0;                      // > 0 while the server is knocked offline
+    this.outages = 0;
   }
 
   /* ------------------------------------------------------------ terrain */
@@ -85,7 +108,7 @@ class PacketGame {
 
   /* ------------------------------------------------------------- skills */
   canAssign(p, id) {
-    if (!p || !p.alive || this.skills[id] <= 0 || this.state !== "playing") return false;
+    if (!p || !p.alive || p.junk || this.skills[id] <= 0 || this.state !== "playing") return false;
     const s = SKILLS.find(k => k.id === id);
     if (id === "uplink") return !p.climber;
     if (id === "buffer") return !p.floater;
@@ -104,7 +127,7 @@ class PacketGame {
       case "overflow": p.bomb = OVERFLOW_TICKS; break;
       case "firewall": p.state = "block"; break;
       case "bridge": p.state = "build"; p.bricks = BRICKS; p.timer = 0; break;
-      case "tunnel": p.state = "bash"; p.timer = 0; break;
+      case "tunnel": p.state = "bash"; p.timer = 0; p.encrypted = true; break;
       case "pipe": p.state = "dig"; p.timer = 0; break;
     }
     this.events.push({ type: "assign", skill: id });
@@ -118,7 +141,7 @@ class PacketGame {
   pick(x, y, skill, slack = 0) {
     let best = null, bestD = Infinity;
     for (const p of this.packets) {
-      if (!p.alive) continue;
+      if (!p.alive || p.junk) continue;
       if (Math.abs(p.x - x) > 5 + slack || y < p.y - 11 - slack || y > p.y + 3 + slack) continue;
       if (skill && !this.canAssign(p, skill)) continue;
       const d = Math.abs(p.x - x) + Math.abs(p.y - 4 - y);
@@ -142,25 +165,52 @@ class PacketGame {
 
     const lv = this.level;
     if (!this.nuking && this.spawned < lv.count && (this.tick === 1 || (this.tick - 1) % this.rate === 0)) {
-      this.packets.push({
-        id: this.spawned++, x: lv.hatch.x, y: lv.hatch.y, dir: lv.hatch.dir || 1,
-        state: "fall", fall: 0, climber: false, floater: false, bomb: 0,
-        bricks: 0, timer: 0, anim: 0, alive: true
-      });
+      const id = this.spawned++;
+      const kind = lv.types ? PACKET_KINDS[lv.types[id % lv.types.length]] : undefined;
+      this.packets.push(this.makePacket(id, lv.hatch, kind));
       this.events.push({ type: "spawn" });
     }
+    /* TCP retransmissions come back out of the same router */
+    while (!this.nuking && this.retx.length && this.retx[0].due <= this.tick) {
+      const r = this.retx.shift();
+      const p = this.makePacket(r.id, lv.hatch, "tcp");
+      p.retry = 1;
+      this.packets.push(p);
+      this.resent++;
+      this.events.push({ type: "resend" });
+    }
+    /* the botnet floods the server with junk */
+    const bn = this.botnet;
+    if (bn && !this.nuking && this.junkSpawned < bn.count && this.tick >= (bn.start || 1) &&
+        (this.tick - (bn.start || 1)) % bn.rate === 0) {
+      const p = this.makePacket(1000 + this.junkSpawned++, bn, undefined);
+      p.junk = true;
+      this.packets.push(p);
+    }
+    if (this.downTicks > 0 && --this.downTicks === 0) this.events.push({ type: "up" });
+    if (this.load > 0 && this.tick % LOAD_DECAY_TICKS === 0) this.load--;
 
     for (const p of this.packets) if (p.alive) this.update(p);
 
-    /* firewalls never move again, so once they are all that is left the run is over */
-    const alive = this.packets.some(p => p.alive && p.state !== "block");
+    /* firewalls never move again, so once they are all that is left the run is over;
+       junk traffic does not keep a level going */
+    const alive = this.packets.some(p => p.alive && !p.junk && p.state !== "block") || this.retx.length > 0;
     if (this.ticksLeft <= 0) {
+      this.retx.length = 0;
       for (const p of this.packets) if (p.alive) this.kill(p, "ttl");
       this.finish();
     } else if (!alive && (this.spawned >= lv.count || this.nuking)) {
       for (const p of this.packets) if (p.alive) this.kill(p, "firewall");
       this.finish();
     }
+  }
+
+  makePacket(id, at, kind) {
+    return {
+      id, x: at.x, y: at.y, dir: at.dir || 1, kind,
+      state: "fall", fall: 0, climber: false, floater: false, bomb: 0,
+      bricks: 0, timer: 0, anim: 0, alive: true, retry: 0, encrypted: false, junk: false
+    };
   }
 
   finish() {
@@ -171,6 +221,12 @@ class PacketGame {
   kill(p, why) {
     p.alive = false;
     p.death = why;
+    if (p.junk) { this.events.push({ type: "junkdown", x: p.x, y: p.y }); return; }
+    if (p.kind === "tcp" && !p.retry && !this.nuking && RETRANSMIT_ON.includes(why)) {
+      this.retx.push({ due: this.tick + RETRANSMIT_TICKS, id: p.id });
+      this.events.push({ type: "lost", why, x: p.x, y: p.y, recoverable: true });
+      return;
+    }
     this.lost++;
     this.losses[why] = (this.losses[why] || 0) + 1;
     this.events.push({ type: "lost", why, x: p.x, y: p.y });
@@ -194,7 +250,10 @@ class PacketGame {
 
     switch (p.state) {
       case "fall": this.doFall(p); break;
-      case "walk": this.doWalk(p); break;
+      case "walk":
+        this.doWalk(p);
+        if (p.kind === "udp" && p.state === "walk" && p.alive) this.doWalk(p);   // UDP: twice the pace
+        break;
       case "climb": this.doClimb(p); break;
       case "block":
       case "crash": if (!this.solid(p.x, p.y + 1)) this.startFall(p); break;
@@ -209,9 +268,26 @@ class PacketGame {
     for (const h of this.hazards) {
       if (p.x >= h.x && p.x < h.x + h.w && p.y >= h.y && p.y < h.y + h.h) { this.kill(p, "short"); return; }
     }
+    /* a man in the middle reads (and keeps) anything that is not encrypted */
+    if (!p.junk && !p.encrypted) {
+      for (const z of this.mitm) {
+        if (p.x >= z.x && p.x < z.x + z.w && p.y >= z.y && p.y < z.y + z.h) { this.kill(p, "mitm"); return; }
+      }
+    }
     const ex = this.level.exit;
     if (p.state !== "block" && Math.abs(p.x - ex.x) <= 3 && p.y <= ex.y && p.y >= ex.y - 6) {
       p.alive = false;
+      if (p.junk) {                           // junk eats server capacity
+        this.events.push({ type: "junkin" });
+        if (this.downTicks === 0 && ++this.load >= this.server.capacity) {
+          this.load = 0;
+          this.downTicks = this.server.down;
+          this.outages++;
+          this.events.push({ type: "down" });
+        }
+        return;
+      }
+      if (this.downTicks > 0) { p.alive = true; this.kill(p, "refused"); return; }
       p.saved = true;
       this.saved++;
       this.events.push({ type: "saved" });
@@ -236,6 +312,8 @@ class PacketGame {
   }
 
   blockedByFirewall(p, nx) {
+    /* with a filter rule the firewall drops botnet junk and lets real traffic through */
+    if (this.level.firewallRule === "junk" && !p.junk) return false;
     for (const b of this.packets) {
       if (b === p || !b.alive || b.state !== "block") continue;
       if (Math.abs(b.y - p.y) > 6) continue;
@@ -325,5 +403,5 @@ class PacketGame {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { PacketGame, SKILLS, M, LW, LH, TICK_HZ, SAFE_FALL };
+  module.exports = { PacketGame, SKILLS, M, LW, LH, TICK_HZ, SAFE_FALL, PACKET_KINDS };
 }

@@ -274,6 +274,91 @@ const PACKET_LEVELS = [
       en: "The <b>OSI model</b> splits networking into seven layers: Physical, Data Link, Network, Transport, Session, Presentation and Application. Sending data wraps it layer by layer on the way down, and receiving unwraps it on the way up. Each layer does one job and relies on the one below it — just like each packet here does one job.",
       zh: "<b>OSI 模型</b>把网络通信分成七层：物理层、数据链路层、网络层、传输层、会话层、表示层和应用层。发送时数据自上而下逐层封装，接收时自下而上逐层拆封。每一层只做一件事，并依赖下面那一层 —— 就像这里每个数据包只负责一项工作。"
     }
+  },
+  {
+    id: "besteffort",
+    osi: [4],
+    osiWhy: {
+      en: "TCP and UDP are the two Transport-layer protocols: TCP numbers and acknowledges every segment and resends what goes missing; UDP just sends.",
+      zh: "TCP 和 UDP 是传输层的两种协议：TCP 为每个段编号并确认，丢失就重传；UDP 只管发送。"
+    },
+    name: { en: "Best Effort", zh: "尽力而为" },
+    count: 12, need: 8, rate: 55, ttl: 180,
+    types: "TU",
+    hatch: { x: 40, y: 85 },
+    exit: { x: 350, y: 129 },
+    skills: { bridge: 2 },
+    terrain: [
+      { x: 0, y: 130, w: 190, h: 20 },
+      { x: 212, y: 130, w: 188, h: 20 }
+    ],
+    goal: {
+      en: "Blue packets are <b>TCP</b>: lose one and it is resent from the router. Orange packets are <b>UDP</b>: twice as fast, but gone for good. Bridge the gap before the UDP traffic runs off the edge.",
+      zh: "蓝色数据包是 <b>TCP</b>：丢失后会从路由器重新发送。橙色数据包是 <b>UDP</b>：速度快一倍，但丢了就没了。赶在 UDP 数据包冲下悬崖之前搭好桥。"
+    },
+    note: {
+      en: "<b>TCP</b> is reliable: it numbers every segment, waits for an acknowledgement and <b>retransmits</b> anything that goes missing — slower, but nothing is lost. <b>UDP</b> is best effort: no set-up, no acknowledgements, no second chances — fast, which is why live video, games and DNS use it.",
+      zh: "<b>TCP</b> 是可靠的：它为每个段编号，等待确认，丢失的就<b>重传</b> —— 慢一些，但不会丢数据。<b>UDP</b> 是尽力而为：不建立连接、不确认、不重传 —— 很快，所以直播视频、游戏和 DNS 都用它。"
+    }
+  },
+  {
+    id: "mitm",
+    osi: [3, 6],
+    osiWhy: {
+      en: "The attacker listens on the network path (layer 3). Encryption — a Presentation-layer job, delivered by a VPN tunnel or TLS — is what makes the stolen data useless.",
+      zh: "攻击者在网络路径上监听（第 3 层）。加密属于表示层的职责，通过 VPN 隧道或 TLS 实现，它让被窃取的数据毫无用处。"
+    },
+    name: { en: "Man in the Middle", zh: "中间人攻击" },
+    count: 10, need: 7, rate: 45, ttl: 200,
+    types: "T",
+    hatch: { x: 40, y: 75 },
+    exit: { x: 276, y: 159 },
+    skills: { pipe: 2, tunnel: 2 },
+    mitm: [{ x: 150, y: 80, w: 100, h: 40 }],
+    terrain: [
+      { x: 0, y: 120, w: 400, h: 40 },
+      { x: 0, y: 160, w: 400, h: 40, m: STEEL },
+      { x: 262, y: 120, w: 28, h: 40, m: 0 }
+    ],
+    goal: {
+      en: "Someone is listening on the open road. Anything that crosses the red zone is <b>intercepted</b>. Dig down with a <b>Pipe</b>, then <b>Tunnel</b> underneath the eavesdropper to the server in the pit. A tunnelling packet is encrypted and carries a padlock.",
+      zh: "有人在公开道路上监听，任何穿过红色区域的数据包都会被<b>截获</b>。先用<b>管道</b>向下挖，再用<b>隧道</b>从窃听者下方穿过，到达坑底的服务器。挖隧道的数据包会被加密，头上带有锁形标志。"
+    },
+    note: {
+      en: "In a <b>man-in-the-middle</b> attack someone secretly sits between two parties and reads — or changes — everything they send, often on public Wi-Fi. The defence is <b>encryption</b>: a VPN tunnel or HTTPS wraps the data so that an eavesdropper sees only scrambled bytes.",
+      zh: "在<b>中间人攻击</b>中，有人暗中插在通信双方之间，读取甚至篡改他们发送的一切，公共 Wi-Fi 上尤为常见。防御方法是<b>加密</b>：VPN 隧道或 HTTPS 把数据包裹起来，窃听者只能看到一堆乱码。"
+    }
+  },
+  {
+    id: "ddos",
+    osi: [3, 4, 7],
+    osiWhy: {
+      en: "Floods hit several layers: volumetric floods fill the link (3), SYN floods exhaust connections (4) and HTTP floods swamp the web server itself (7).",
+      zh: "洪水攻击涉及多个层：流量型洪水塞满链路（第 3 层），SYN 洪水耗尽连接（第 4 层），HTTP 洪水直接压垮网页服务器（第 7 层）。"
+    },
+    name: { en: "Denial of Service", zh: "拒绝服务" },
+    count: 12, need: 7, rate: 50, ttl: 200,
+    types: "TU",
+    hatch: { x: 40, y: 95 },
+    exit: { x: 330, y: 139 },
+    skills: { firewall: 1, bridge: 1 },
+    firewallRule: "junk",
+    botnet: { x: 150, y: 95, dir: 1, count: 14, rate: 36, start: 30 },
+    server: { capacity: 3, down: 140 },
+    terrain: [
+      { x: 0, y: 140, w: 88, h: 20 },
+      { x: 108, y: 140, w: 292, h: 20 },
+      { x: 0, y: 160, w: 400, h: 40, m: STEEL },
+      { x: 88, y: 160, w: 20, h: 40, m: 0 }
+    ],
+    goal: {
+      en: "A <b>botnet</b> (the red router) is flooding the server with junk. Three junk packets knock it offline, and real packets that arrive then are <b>refused</b>. Bridge the gap, then put up a <b>Firewall</b> past the botnet — its rule drops junk and lets real traffic through.",
+      zh: "一个<b>僵尸网络</b>（红色路由器）正在用垃圾数据包淹没服务器。三个垃圾包就能让服务器下线，此时到达的真实数据包会被<b>拒绝</b>。先搭桥越过缺口，再在僵尸网络后方设置<b>防火墙</b> —— 它的规则会丢弃垃圾包，放行真实流量。"
+    },
+    note: {
+      en: "A <b>distributed denial-of-service</b> (DDoS) attack uses thousands of hijacked machines — a botnet — to flood a server until it cannot answer real users. Defences filter the junk before it arrives: firewall rules, rate limits and scrubbing services that drop attack traffic and pass the rest.",
+      zh: "<b>分布式拒绝服务</b>（DDoS）攻击利用成千上万台被劫持的机器 —— 僵尸网络 —— 向服务器发起洪水般的请求，直到它无法回应真实用户。防御的办法是在垃圾流量到达之前把它过滤掉：防火墙规则、限速，以及丢弃攻击流量、放行正常流量的清洗服务。"
+    }
   }
 ];
 

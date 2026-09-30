@@ -10,7 +10,7 @@
    node tools/check.js          all levels
    node tools/check.js 3        just level 3, with a per-packet report */
 
-const { PacketGame, SKILLS, LW, LH } = require("../js/engine.js");
+const { PacketGame, SKILLS, LW, LH, PACKET_KINDS } = require("../js/engine.js");
 const { PACKET_LEVELS, OSI_LAYERS, OSI_EXTRA, TCPIP_LAYERS } = require("../js/levels.js");
 
 const walking = (dir) => p => p.state === "walk" && (dir === undefined || p.dir === dir);
@@ -35,6 +35,17 @@ const SOLUTIONS = {
   overflow: [
     { id: 0, skill: "firewall", when: p => walking(1)(p) && p.x >= 310 },
     { id: 1, skill: "overflow", when: p => walking(-1)(p) && p.x <= 118 }
+  ],
+  besteffort: [
+    { id: 0, skill: "bridge", when: p => walking(1)(p) && p.x >= 187 }
+  ],
+  mitm: [
+    { id: 0, skill: "pipe", when: p => walking(1)(p) && p.x >= 100 },
+    { id: 0, skill: "tunnel", when: p => walking(1)(p) && p.y >= 150 }
+  ],
+  ddos: [
+    { id: 0, skill: "bridge", when: p => walking(1)(p) && p.x >= 85 },
+    { id: 0, skill: "firewall", when: p => walking(1)(p) && p.x >= 165 }
   ],
   stack: [
     { id: 0, skill: "bridge", when: p => walking(1)(p) && p.x >= 117 },
@@ -101,6 +112,22 @@ PACKET_LEVELS.forEach((level, i) => {
   for (const f of ["name", "goal", "note", "osiWhy"]) {
     if (!level[f] || !level[f].en || !level[f].zh) problems.push(`${tag}: ${f} needs both English and Mandarin`);
   }
+  /* packet types and enemies */
+  if (level.types !== undefined && (!level.types.length || [...level.types].some(c => !PACKET_KINDS[c]))) {
+    problems.push(`${tag}: types may only use ${Object.keys(PACKET_KINDS).join(", ")}`);
+  }
+  for (const z of level.mitm || []) {
+    if (!(z.w > 0 && z.h > 0) || !inside(z.x, z.y)) problems.push(`${tag}: a man-in-the-middle zone is off the map or empty`);
+    if (level.exit.x >= z.x && level.exit.x < z.x + z.w && level.exit.y >= z.y && level.exit.y < z.y + z.h) {
+      problems.push(`${tag}: the server sits inside a man-in-the-middle zone`);
+    }
+  }
+  if (level.botnet) {
+    const b = level.botnet;
+    if (!inside(b.x, b.y) || !(b.count > 0) || !(b.rate > 0)) problems.push(`${tag}: botnet needs a position on the map, a count and a rate`);
+  }
+  if (level.firewallRule !== undefined && level.firewallRule !== "junk") problems.push(`${tag}: unknown firewallRule "${level.firewallRule}"`);
+
   const probe = new PacketGame(level);
   if (!probe.solid(level.exit.x, level.exit.y + 1)) problems.push(`${tag}: nothing to stand on at the exit`);
 

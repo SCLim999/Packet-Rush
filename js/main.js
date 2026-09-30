@@ -36,13 +36,17 @@ const TEXT = {
     "ov.lost": "Too much packet loss",
     "ov.lostText": "Only {saved} of the {need} packets you needed reached the server.",
     "ov.wonText": "{saved} of {count} packets reached the server — {need} were needed.",
-    "ov.wonAllText": "All seven networks are delivering. Replay any level to beat your best.",
+    "ov.wonAllText": "Every network is delivering. Replay any level to beat your best.",
     "ov.next": "Next level", "ov.retry": "Try again", "ov.levels": "Levels", "ov.replay": "Replay",
     "ov.paused": "Paused", "ov.pausedText": "The network is frozen. Nothing moves until you resume.",
     "ov.concept": "Concept", "ov.newBest": "New best!",
     "loss.splat": "corrupted by a long fall", "loss.void": "dropped off the network",
     "loss.short": "shorted on a live wire", "loss.overflow": "overflowed",
     "loss.ttl": "TTL expired", "loss.firewall": "stayed on as a firewall",
+    "loss.mitm": "intercepted by a man in the middle", "loss.refused": "refused by the overloaded server",
+    "hud.resent": "Resent", "hud.server": "Server", "server.up": "online", "server.down": "offline (503)",
+    "fx.resend": "resent", "fx.down": "503 overloaded", "fx.up": "back online",
+    "help.p4": "<b>Packet types:</b> blue packets are <b>TCP</b> — lost once, they are resent from the router. Orange packets are <b>UDP</b> — twice as fast, never resent. <b>Enemies:</b> red junk packets come from a <b>botnet</b> and knock the server offline when three get in; a red <b>man-in-the-middle</b> zone steals any packet that is not encrypted — a packet that tunnels carries a padlock and is safe.",
     "stat.saved": "Delivered", "stat.lost": "Lost", "stat.time": "Time",
     "note.pick": "Pick a skill, then click a packet to give it that job.",
     "note.none": "No <b>{skill}</b> left — try another skill.",
@@ -91,13 +95,17 @@ const TEXT = {
     "ov.lost": "丢包太多",
     "ov.lostText": "只有 {saved} 个数据包到达服务器，需要 {need} 个。",
     "ov.wonText": "{count} 个数据包中有 {saved} 个到达服务器 —— 需要 {need} 个。",
-    "ov.wonAllText": "七个网络全部畅通。可以重玩任意关卡，刷新你的最佳成绩。",
+    "ov.wonAllText": "所有网络全部畅通。可以重玩任意关卡，刷新你的最佳成绩。",
     "ov.next": "下一关", "ov.retry": "再试一次", "ov.levels": "关卡", "ov.replay": "重玩",
     "ov.paused": "已暂停", "ov.pausedText": "网络已冻结，继续之前一切都不会动。",
     "ov.concept": "知识点", "ov.newBest": "新纪录！",
     "loss.splat": "摔得太远而损坏", "loss.void": "掉出了网络",
     "loss.short": "碰到带电导线短路", "loss.overflow": "溢出了",
     "loss.ttl": "TTL 耗尽", "loss.firewall": "留作防火墙",
+    "loss.mitm": "被中间人截获", "loss.refused": "被过载的服务器拒绝",
+    "hud.resent": "重传", "hud.server": "服务器", "server.up": "在线", "server.down": "离线 (503)",
+    "fx.resend": "重传", "fx.down": "503 过载", "fx.up": "恢复在线",
+    "help.p4": "<b>数据包类型：</b>蓝色是 <b>TCP</b> —— 丢失一次会从路由器重新发送。橙色是 <b>UDP</b> —— 速度快一倍，但不会重传。<b>敌人：</b>红色垃圾包来自<b>僵尸网络</b>，三个进入服务器就会让它下线；红色的<b>中间人</b>区域会截获任何未加密的数据包 —— 挖过隧道的数据包带有锁形标志，是安全的。",
     "stat.saved": "送达", "stat.lost": "丢失", "stat.time": "用时",
     "note.pick": "先选一个技能，再点击一个数据包，把这项工作交给它。",
     "note.none": "<b>{skill}</b>已经用完了 —— 换个技能试试。",
@@ -447,16 +455,16 @@ function drawBackground(pal) {
   }
 }
 
-function drawRouter(h) {
+function drawRouter(h, accent = "#45d0e0") {
   const x = h.x - 12, y = h.y - 14;
   ctx.fillStyle = "#1e293b";
   ctx.fillRect(x, y, 24, 9);
-  ctx.strokeStyle = "#45d0e0";
+  ctx.strokeStyle = accent;
   ctx.lineWidth = 0.75;
   ctx.strokeRect(x + 0.5, y + 0.5, 23, 8);
   for (let i = 0; i < 4; i++) {           // blinking link lights
     const on = ((frame >> 3) + i * 3) % 5 < 3;
-    ctx.fillStyle = on ? (i % 2 ? "#4ade80" : "#f5a524") : "#334155";
+    ctx.fillStyle = on ? (accent === "#45d0e0" ? (i % 2 ? "#4ade80" : "#f5a524") : accent) : "#334155";
     ctx.fillRect(x + 3 + i * 3, y + 3, 1.5, 1.5);
   }
   ctx.fillStyle = "#94a3b8";                // antennae
@@ -480,10 +488,58 @@ function drawServer(ex) {
     ctx.fillRect(x + 13, y + 2.5 + i * 3, 1.5, 1);
   }
   const glow = 0.55 + 0.35 * Math.sin(frame / 8);
-  ctx.fillStyle = `rgba(74,222,128,${glow})`;   // the open port
+  const down = game.downTicks > 0;
+  ctx.fillStyle = down ? `rgba(248,113,113,${0.5 + 0.4 * (frame % 10 < 5)})` : `rgba(74,222,128,${glow})`;   // the port
   ctx.fillRect(ex.x - 4, ex.y - 11, 8, 12);
   ctx.fillStyle = "rgba(255,255,255,0.8)";
   ctx.fillRect(ex.x - 1, ex.y - 13, 2, 1);
+  if (down) {
+    ctx.fillStyle = "#f87171";
+    ctx.font = "bold 7px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("503", ex.x, y - 3);
+  } else if (game.botnet && game.load > 0) {            // how close the server is to falling over
+    for (let i = 0; i < game.server.capacity; i++) {
+      ctx.fillStyle = i < game.load ? "#fb923c" : "#334155";
+      ctx.fillRect(x + 2 + i * 5, y - 3, 4, 1.5);
+    }
+  }
+}
+
+/* A man-in-the-middle zone: a watched patch of network with a scanning line. */
+function drawMitm(z) {
+  ctx.fillStyle = "rgba(248,113,113,0.10)";
+  ctx.fillRect(z.x, z.y, z.w, z.h);
+  ctx.strokeStyle = "rgba(248,113,113,0.7)";
+  ctx.lineWidth = 0.6;
+  ctx.setLineDash([3, 2]);
+  ctx.strokeRect(z.x + 0.3, z.y + 0.3, z.w - 0.6, z.h - 0.6);
+  ctx.setLineDash([]);
+  const sy = z.y + ((frame * 0.6) % z.h);
+  ctx.fillStyle = "rgba(248,113,113,0.35)";
+  ctx.fillRect(z.x, sy, z.w, 0.8);
+  const cx = z.x + z.w / 2, cy = z.y - 5;                // the eye
+  ctx.fillStyle = "#1e293b";
+  ctx.beginPath(); ctx.ellipse(cx, cy, 7, 3.6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#f87171"; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.ellipse(cx, cy, 7, 3.6, 0, 0, Math.PI * 2); ctx.stroke();
+  const look = Math.sin(frame / 25) * 3;
+  ctx.fillStyle = "#f87171";
+  ctx.beginPath(); ctx.arc(cx + look, cy, 1.8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(248,113,113,0.85)";
+  ctx.font = "bold 5px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("MITM", cx, z.y + 6);
+}
+
+const KIND_COLOR = { tcp: "#93c5fd", udp: "#fdba74" };
+
+/* A tiny padlock for encrypted packets. */
+function drawLock(x, y) {
+  ctx.fillStyle = "#facc15";
+  ctx.fillRect(x - 1.8, y - 1, 3.6, 2.6);
+  ctx.strokeStyle = "#facc15"; ctx.lineWidth = 0.6;
+  ctx.beginPath(); ctx.arc(x, y - 1, 1.2, Math.PI, 0); ctx.stroke();
 }
 
 function drawHazard(h) {
@@ -510,7 +566,14 @@ function drawHazard(h) {
 /* A packet is a little envelope on legs. Colour and props show its job. */
 function drawPacket(p, highlight) {
   const x = p.x, y = p.y, f = p.dir;
-  const body = STATE_COLOR[p.state] || (p.climber || p.floater ? "#a7f3d0" : "#e0f2fe");
+  const body = p.junk ? "#fca5a5"
+    : STATE_COLOR[p.state] || KIND_COLOR[p.kind] || (p.climber || p.floater ? "#a7f3d0" : "#e0f2fe");
+
+  if (p.kind === "udp" && p.state === "walk") {             // UDP: speed lines behind it
+    ctx.fillStyle = "rgba(253,186,116,0.6)";
+    ctx.fillRect(x - f * 6 - 1.5, y - 7, 2.5, 0.6);
+    ctx.fillRect(x - f * 7 - 1.5, y - 5, 3, 0.6);
+  }
 
   if (p.state === "fall" && p.floater && p.fall >= 12) {   // the buffer opens like a canopy
     ctx.fillStyle = "#45d0e0";
@@ -552,7 +615,18 @@ function drawPacket(p, highlight) {
   ctx.lineTo(bx + 6.75, by + 0.25);
   ctx.stroke();
   ctx.fillStyle = "#0f172a";                // eye, looking where it walks
-  ctx.fillRect(bx + 3.5 + f * 1.8 - 0.5, by + 3.4, 1, 1);
+  if (p.junk) {                             // junk: crossed-out eyes
+    ctx.strokeStyle = "#7f1d1d"; ctx.lineWidth = 0.5;
+    const ex = bx + 3.5 + f * 1.6;
+    ctx.beginPath(); ctx.moveTo(ex - 0.8, by + 3); ctx.lineTo(ex + 0.8, by + 4.6); ctx.moveTo(ex + 0.8, by + 3); ctx.lineTo(ex - 0.8, by + 4.6); ctx.stroke();
+  } else {
+    ctx.fillRect(bx + 3.5 + f * 1.8 - 0.5, by + 3.4, 1, 1);
+  }
+  if (p.encrypted) drawLock(x, by - 2.5);
+  if (p.retry) {                            // a resent copy
+    ctx.strokeStyle = "#93c5fd"; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.arc(bx - 1.5, by + 1, 1.3, 0.3, Math.PI * 1.7); ctx.stroke();
+  }
 
   if (p.climber) { ctx.fillStyle = "#4ade80"; ctx.fillRect(bx, by + 5, 7, 0.8); }
 
@@ -704,6 +778,21 @@ function render3D() {
     fx.fillStyle = secs <= 1 && frame % 4 < 2 ? "#ffffff" : "#fb7185";
     fx.fillText(String(secs), sx, sy);
   }
+  /* enemy labels: the outage over the server, the zone name */
+  if (game.downTicks > 0) {
+    const [sx, sy] = at(game.level.exit.x, game.level.exit.y - 28, -4);
+    fx.font = `bold ${Math.round(9 * unit)}px ui-monospace, monospace`;
+    fx.lineWidth = 3 * dpr; fx.strokeStyle = "rgba(0,0,0,0.6)";
+    fx.strokeText("503", sx, sy);
+    fx.fillStyle = "#f87171";
+    fx.fillText("503", sx, sy);
+  }
+  for (const z of game.mitm) {
+    const [sx, sy] = at(z.x + z.w / 2, z.y + 6, 10);
+    fx.font = `bold ${Math.round(6 * unit)}px ui-monospace, monospace`;
+    fx.fillStyle = "rgba(248,113,113,0.9)";
+    fx.fillText("MITM", sx, sy);
+  }
   if (target) {
     const [sx, sy] = at(target.x, target.y - 6, 0);
     fx.strokeStyle = "#4ade80";
@@ -737,8 +826,10 @@ function render2D() {
   drawBackground(pal);
   ctx.drawImage(terrainCanvas, 0, 0);
   for (const h of game.hazards) drawHazard(h);
+  for (const z of game.mitm) drawMitm(z);
   drawServer(game.level.exit);
   drawRouter(game.level.hatch);
+  if (game.botnet) drawRouter(game.botnet, "#f87171");
 
   const target = hover && running ? game.pick(hover.x, hover.y, selected) : null;
   for (const p of game.packets) if (p.alive) drawPacket(p, p === target);
@@ -884,6 +975,12 @@ function updateHUD() {
   el("hud-in").textContent = game.saved;
   el("hud-need").textContent = game.level.need;
   el("hud-lost").textContent = game.lost;
+  el("hud-resent-box").hidden = !game.level.types;
+  el("hud-resent").textContent = game.resent;
+  el("hud-server-box").hidden = !game.botnet;
+  const srv = el("hud-server");
+  srv.textContent = t(game.downTicks > 0 ? "server.down" : "server.up");
+  srv.classList.toggle("down", game.downTicks > 0);
   const ttl = el("hud-ttl");
   ttl.textContent = fmtTime(game.ticksLeft);
   ttl.style.color = game.ticksLeft < 20 * TICK_HZ ? "var(--red)" : "";
@@ -1045,10 +1142,24 @@ function drainEvents() {
       case "lost":
         if (e.why !== "overflow" && e.why !== "ttl" && e.why !== "firewall") {
           beep(160, 120, "sawtooth", 0.03, -60);
-          burst(e.x, e.y - 4, ["#e0f2fe", "#f87171"], 10);
-          effects.push({ kind: "text", text: "×", x: e.x, y: e.y - 10, life: 35, color: "#f87171" });
+          burst(e.x, e.y - 4, e.recoverable ? ["#93c5fd", "#e0f2fe"] : ["#e0f2fe", "#f87171"], 10);
+          effects.push({ kind: "text", text: e.recoverable ? "↻" : "×", x: e.x, y: e.y - 10, life: 35, color: e.recoverable ? "#93c5fd" : "#f87171" });
         }
         break;
+      case "resend":
+        beep(620, 60, "triangle", 0.03, 180);
+        effects.push({ kind: "text", text: "↻ " + t("fx.resend"), x: game.level.hatch.x, y: game.level.hatch.y - 20, life: 45, color: "#93c5fd" });
+        break;
+      case "down":
+        beep(110, 400, "sawtooth", 0.06, -50);
+        effects.push({ kind: "text", text: t("fx.down"), x: game.level.exit.x, y: game.level.exit.y - 30, life: 70, color: "#f87171" });
+        break;
+      case "up":
+        beep(700, 120, "triangle", 0.04, 200);
+        effects.push({ kind: "text", text: t("fx.up"), x: game.level.exit.x, y: game.level.exit.y - 30, life: 50, color: "#4ade80" });
+        break;
+      case "junkin": beep(200, 40, "square", 0.02); break;
+      case "junkdown": burst(e.x, e.y - 4, ["#fca5a5", "#7f1d1d"], 6); break;
       case "boom":
         beep(90, 250, "sawtooth", 0.06, -40);
         burst(e.x, e.y, ["#fb7185", "#facc15", "#ffffff", "#22805a"], 26);
@@ -1067,7 +1178,10 @@ function loop(now) {
     drainEvents();
     updateHUD();
     updateSkills();
-    if (game.state !== "playing") setTimeout(showResult, 700);
+    if (game.state !== "playing") {
+      const finished = game;                   // ignore it if a new level starts in the meantime
+      setTimeout(() => { if (game === finished) showResult(); }, 700);
+    }
   }
   last = now;
   if (nukeArmed && now > nukeArmed) { nukeArmed = 0; el("btn-nuke").classList.remove("armed"); el("skill-note").innerHTML = ""; }
