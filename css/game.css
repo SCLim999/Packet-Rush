@@ -393,3 +393,31 @@ body.fullscreen .rush { padding-top: max(8px, env(safe-area-inset-top)); padding
 body.fullscreen #btn-full { border-color: var(--cyan); color: var(--cyan); }
 body.fullscreen.pseudo-fs { overflow: hidden; }
 body.fullscreen .rush { min-height: 100dvh; align-content: center; }
+
+/* Full-screen toggle at the end of the status bar, always in reach. */
+.hud-full {
+  display: grid; place-items: center;
+  width: 34px; height: 30px; margin: -4px -8px -4px 0; padding: 0;
+  color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.hud-full:hover, .hud-full:focus-visible { border-color: var(--cyan); color: var(--cyan); outline: none; }
+.hud-full svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.hud-full .fs-exit, body.fullscreen .hud-full .fs-enter { display: none; }
+body.fullscreen .hud-full .fs-exit { display: inline; }
+body.fullscreen .hud-full { border-color: var(--cyan); color: var(--cyan); }
+@media (pointer: coarse) { .hud-full { width: 40px; height: 36px; } }
+
+/* Immersive fallback when the browser (or the page hosting the game) refuses
+   real full screen: a fixed layer over the whole viewport. */
+body.pseudo-fs .rush {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow-y: auto;
+  background:
+    radial-gradient(1100px 600px at 20% -10%, var(--glow-1) 0%, transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, var(--glow-2) 0%, transparent 55%),
+    var(--bg);
+}

@@ -40,7 +40,7 @@ of each skill.
 | Pause / fast forward / restart | <kbd>P</kbd> / <kbd>F</kbd> / <kbd>R</kbd> |
 | Switch 3D / 2D view | <kbd>V</kbd>, or the *View* button |
 | Tilt / zoom / reset the 3D camera | drag empty space / scroll / double-click |
-| Full screen | <kbd>G</kbd>, or the *Full screen* button |
+| Full screen | <kbd>G</kbd>, the *Full screen* button, or the ⛶ icon at the end of the status bar |
 | End the run (*kill -9*) | <kbd>K</kbd> twice |
 | Language | the *中文 / EN* button |
 | Colours | the *Theme* picker: Bright, Dark, Soft, Energy, Excited |

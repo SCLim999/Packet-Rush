@@ -1096,7 +1096,10 @@ function setPseudo(on) {
 function toggleFull() {
   if (pseudoFs) { setPseudo(false); return; }
   if (fsEl()) {
-    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    /* update the layout when the exit completes too: fullscreenchange is not
+       delivered reliably everywhere */
+    Promise.resolve((document.exitFullscreen || document.webkitExitFullscreen).call(document))
+      .catch(() => {}).then(() => setTimeout(onFullChange, 50));
     return;
   }
   const root = document.documentElement;
@@ -1104,6 +1107,8 @@ function toggleFull() {
   const native = req && (document.fullscreenEnabled || document.webkitFullscreenEnabled);
   if (!native) { setPseudo(true); return; }
   Promise.resolve(req.call(root, { navigationUI: "hide" })).then(() => {
+    onFullChange();
+    if (!fsEl()) { setPseudo(true); return; }   // "succeeded" without actually going full screen
     try { screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape").catch(() => {}); } catch (e) { /* not allowed */ }
   }).catch(() => setPseudo(true));
 }
@@ -1113,11 +1118,13 @@ function onFullChange() {
   document.body.classList.toggle("fullscreen", on);
   el("btn-full").setAttribute("aria-pressed", String(on));
   el("btn-full").querySelector("span").textContent = t(on ? "ctl.exitFull" : "ctl.full");
+  el("btn-full-hud").title = el("btn-full-hud").ariaLabel = t(on ? "ctl.exitFull" : "ctl.full");
   if (r3) r3.markDirty();
 }
 document.addEventListener("fullscreenchange", onFullChange);
 document.addEventListener("webkitfullscreenchange", onFullChange);
 el("btn-full").onclick = toggleFull;
+el("btn-full-hud").onclick = toggleFull;
 
 function toggleView() {
   if (!r3) return;
