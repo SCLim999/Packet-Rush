@@ -80,6 +80,59 @@ unlocks the next one on that browser.
 | 8 | Best Effort | TCP and UDP packets | 4 Transport |
 | 9 | Man in the Middle | an eavesdropper; tunnelling encrypts | 3 Network, 6 Presentation |
 | 10 | Denial of Service | a botnet flood; a filtering firewall | 3, 4, 7 |
+| 11 | Routing Table | addressed servers and route switches | 3 Network |
+| 12 | Congestion Control | a link with a capacity; the release-rate control | 4 Transport |
+| 13 | Keep-Alive | a session gate that times out | 5 Session |
+| 14 | Fibre Cut | a cut cable and interference | 1 Physical |
+
+The level list can show them **by OSI layer** — seven worlds climbing the
+stack from Physical to Application, each with its stars — or in order.
+
+### Stars and the daily challenge
+
+Every level awards up to three stars: **★** for finishing, **★★** for
+delivering the level's par number of packets, **★★★** for doing that with no
+more than its par number of skills. `tools/check.js` proves three stars are
+reachable on every level. The **daily challenge** picks one level per date
+(the same for everyone) and asks for three stars within its par time; the
+level list shows the challenge and your streak.
+
+### Routing, congestion and sessions
+
+| | What it does | The idea behind it |
+|---|---|---|
+| **Addressed servers** | several servers, each with an IP address and a colour; each packet carries a destination tag; delivering to the wrong server loses it | IP addressing |
+| **Route switch** | a sign on the floor pointing packets left or right; click it to flip it — it costs no skill | a router forwarding by its routing table |
+| **Congested link** | carries a set number of packets at a time; the newest to enter a full link is dropped | congestion and packet loss |
+| **Release rate** | on some levels, − / + (or `-` / `=`) sets how often the router sends | TCP congestion control slows down on loss |
+| **Session gate** | opens while a session is alive; crossing the handshake plate starts one, a packet standing on it keeps it alive, and packets reaching a closed gate time out | sessions, time-outs and keep-alives |
+
+### Classroom mode
+
+- **Quick check** — after each win, one question about the level's OSI
+  layer: which layer the idea is on, what that layer's data unit is called, or
+  which layer does a given job. The score is kept.
+- **Class** — a student enters their name and the class code, and copies a
+  **result code**: one line of text holding their stars per level, quiz score
+  and daily streak, with a checksum so edited codes are rejected.
+- **[Teacher page](teacher.html)** — paste the codes (one per line); it keeps
+  the newest per student, filters by class, ranks the class by stars and quiz
+  accuracy, shows stars per level, and copies the table as CSV.
+
+No server is involved: codes travel however the class already shares text,
+and nothing is uploaded.
+
+### Level editor
+
+**[The editor](editor.html)** paints a network the way the built-in levels are
+written — rectangles of silicon, steel or empty space — and places the router,
+the server, live wires, man-in-the-middle zones and a botnet. Set the packet
+count and target, the release gap, the time limit, the packet types and how
+many of each skill to hand out. **Check** runs the real engine: it catches a
+floating or buried server and warns when the level wins with no skills.
+**Test play** opens it in the game; **Copy share link** gives a link
+(`index.html#lvl=<code>`) that anyone can open to play it. Custom levels never
+touch the player's progress.
 
 ### Packet types and enemies
 
@@ -135,7 +188,11 @@ panel:
 | `js/layers.js` | the OSI / TCP/IP layer bands, their animations and the encapsulation message |
 | `js/render3d.js` | the 3D view: a WebGL2 renderer built from one instanced cube, camera and picking |
 | `js/main.js` | 2D rendering, input, overlays, progress, interface text in English and Mandarin |
-| `tools/check.js` | proves every level is winnable and not self-winning |
+| `js/classroom.js` | the quiz questions, result codes and class ranking |
+| `js/codec.js` | level share codes: encode, decode, and clamp anything untrusted |
+| `editor.html`, `js/editor.js`, `css/editor.css` | the level editor |
+| `teacher.html` | the class results page |
+| `tools/check.js` | proves every level is winnable, not self-winning and three-star reachable; checks worlds, quiz questions, result codes and level codes |
 | `manifest.webmanifest`, `icons/` | home-screen install: full screen, landscape, app icon |
 
 ## Editing levels
@@ -181,6 +238,22 @@ every push and pull request.
 TCP 段与端口、在路由器之间跳转的数据包、以太网帧、比特信号）。右侧有一条消息沿协议栈
 向下移动，每经过一层就加上一个首部，直观展示封装过程。当前关卡涉及的层会高亮显示。
 **背景**选单可切换为 TCP/IP 四层或数据中心。
+
+**星星与每日挑战**：每关最多三颗星 —— 通关得 ★，送达目标数量得 ★★，同时技能用量不超过
+目标得 ★★★。每日挑战每天选定一关（所有人相同），要求在限定时间内拿到三颗星，并记录连续天数。
+
+**路由、拥塞与会话**（第 11–14 关）：多台带 IP 地址的服务器，数据包带有目的地标签，点击
+路由开关为它们指路；链路有容量上限，挤满时会丢包，部分关卡可以用 − / + 调整发送速率；
+会话门在会话存活时才开放，站在握手板上的数据包就是保活信号；还有物理层关卡「光纤断裂」。
+关卡列表可按 OSI 七层分组显示。
+
+**课堂模式**：每次过关后有一道关于该关 OSI 层的小测验；学生在「班级」中输入名字和班级代码，
+复制成绩码（含各关星星、测验得分和连续天数，带校验和）；老师在[教师页面](teacher.html)
+粘贴成绩码即可为全班排名并导出 CSV。全程无需服务器，不上传任何数据。
+
+**关卡编辑器**：在[编辑器](editor.html)中绘制硅层、钢板和空洞，放置路由器、服务器、带电
+导线、中间人区域和僵尸网络，设置数量、目标、间隔、时限、数据包类型和技能；「检查」会用真实
+引擎验证关卡，「试玩」直接进入游戏，「复制分享链接」生成任何人都能打开的关卡链接。
 
 **手机与平板**：点选技能后点击数据包即可，触屏的点击范围更大。竖屏时技能排成网格，
 横屏时棋盘在左、技能栏在右。3D 视图可双指缩放。**全屏**按钮会隐藏菜单栏；安卓和电脑上

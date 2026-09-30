@@ -29,7 +29,9 @@ const TEXT = {
     "ctl.pause": "Pause", "ctl.resume": "Resume", "ctl.fast": "Fast", "ctl.restart": "Restart", "ctl.nuke": "kill -9",
     "ctl.nukeConfirm": "Press again to end the run",
     "levels.title": "Levels", "levels.sub": "Deliver enough packets to unlock the next network.",
-    "btn.class": "Class",
+    "btn.class": "Class", "btn.editor": "Editor",
+    "hud.custom": "Custom", "ov.customIntro": "Custom level — {name}", "ov.edit": "Edit this level", "ov.customGoal": "Release {count} packets · deliver at least {need}",
+    "custom.bad": "This level link could not be opened: {why}. Playing level 1 instead.",
     "quiz.title": "Quick check", "quiz.layer": "Which OSI layer is the idea behind “{level}” on?",
     "quiz.pdu": "At layer {n}, {name}, what is the unit of data called?", "quiz.job": "Which layer does this job? “{job}”",
     "quiz.right": "Right!", "quiz.wrong": "Not quite — it is {answer}.", "quiz.tally": "Quiz score: {right}/{asked}",
@@ -104,7 +106,9 @@ const TEXT = {
     "ctl.pause": "暂停", "ctl.resume": "继续", "ctl.fast": "快进", "ctl.restart": "重来", "ctl.nuke": "kill -9",
     "ctl.nukeConfirm": "再按一次结束本局",
     "levels.title": "关卡", "levels.sub": "送达足够的数据包即可解锁下一个网络。",
-    "btn.class": "班级",
+    "btn.class": "班级", "btn.editor": "编辑器",
+    "hud.custom": "自定义", "ov.customIntro": "自定义关卡 —— {name}", "ov.edit": "编辑这个关卡", "ov.customGoal": "发出 {count} 个数据包 · 至少送达 {need} 个",
+    "custom.bad": "无法打开这个关卡链接：{why}。改为进入第 1 关。",
     "quiz.title": "小测验", "quiz.layer": "“{level}”背后的知识点属于 OSI 的哪一层？",
     "quiz.pdu": "第 {n} 层（{name}）的数据单位叫什么？", "quiz.job": "哪一层负责这项工作？“{job}”",
     "quiz.right": "答对了！", "quiz.wrong": "不对哦 —— 答案是{answer}。", "quiz.tally": "测验得分：{right}/{asked}",
@@ -207,7 +211,7 @@ function t(key, vars) {
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.split("{" + k + "}").join(v);
   return s;
 }
-const L = obj => obj[lang] || obj.en;
+const L = obj => (obj ? obj[lang] || obj.en || "" : "");
 const el = id => document.getElementById(id);
 
 /* --------------------------------------------------------------- sound */
@@ -245,6 +249,7 @@ const tctx = terrainCanvas.getContext("2d");
 const terrainImg = tctx.createImageData(LW, LH);
 
 let levelIndex = 0;
+let customLevel = null;               // a level from the editor or a share link; levelIndex is -1 while it plays
 let game = null;
 let selected = null;
 let paused = false;
@@ -1111,7 +1116,7 @@ function fmtTime(ticks) {
 }
 
 function updateHUD() {
-  el("hud-level").textContent = t("hud.level", { n: levelIndex + 1 });
+  el("hud-level").textContent = levelIndex < 0 ? t("hud.custom") : t("hud.level", { n: levelIndex + 1 });
   el("hud-name").textContent = L(game.level.name);
   el("hud-out").textContent = `${game.spawned}/${game.level.count}`;
   el("hud-in").textContent = game.saved;
@@ -1213,6 +1218,7 @@ function openOsi(focus) {
 /* ------------------------------------------------------------ the quiz */
 function renderQuiz(lv) {
   const box = el("ov-quiz");
+  if (!lv.world) return;                  // custom levels have no layer to ask about
   const q = quizFor(lv, OSI_LAYERS, levelIndex * 7919 + progress.quiz.asked * 104729 + 17);
   const layer = OSI_LAYERS.find(l => l.n === q.n);
   const text = q.kind === "layer" ? t("quiz.layer", { level: L(lv.name) })
@@ -1294,6 +1300,15 @@ el("btn-copy-code").onclick = () => {
 
 function showIntro() {
   const lv = game.level;
+  if (lv.custom) {
+    overlay({
+      title: t("ov.customIntro", { name: L(lv.name) }),
+      goal: `<b>${t("ov.customGoal", { count: lv.count, need: lv.need })}</b>` + (L(lv.goal) ? "<br>" + escapeHtml(L(lv.goal)) : ""),
+      primary: [t("ov.start"), hideOverlay],
+      secondary: [t("ov.edit"), editCustom]
+    });
+    return;
+  }
   overlay({
     title: t("ov.intro", { n: levelIndex + 1, name: L(lv.name) }),
     goal: `<b>${t("ov.goal", { count: lv.count, need: lv.need })}</b><br>${L(lv.goal)}`,
@@ -1303,8 +1318,21 @@ function showIntro() {
   });
 }
 
+const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+function editCustom() { location.href = "editor.html#lvl=" + encodeLevel(customLevel); }
+
 function showResult() {
   const lv = game.level, won = game.state === "won";
+  if (lv.custom) {                       // custom levels record nothing
+    overlay({
+      title: won ? t("ov.won") : t("ov.lost"),
+      goal: won ? t("ov.wonText", { saved: game.saved, count: lv.count, need: lv.need }) : t("ov.lostText", { saved: game.saved, need: lv.need }),
+      stats: `<span>${t("stat.saved")} <b>${game.saved}/${lv.count}</b></span><span>${t("stat.time")} <b>${fmtTime(game.tick)}</b></span>`,
+      primary: [t("ov.retry"), () => startLevel(-1, true)],
+      secondary: [t("ov.edit"), editCustom]
+    });
+    return;
+  }
   const losses = Object.entries(game.losses)
     .map(([k, n]) => `${n} ${t("loss." + k)}`).join(" · ");
   const stats = `<span>${t("stat.saved")} <b>${game.saved}/${lv.count}</b></span>`
@@ -1360,14 +1388,15 @@ function togglePause() {
 /* ---------------------------------------------------------------- flow */
 function startLevel(i, skipIntro, fromDaily = false) {
   dailyRun = fromDaily;
+  if (i < 0 && !customLevel) i = 0;
   levelIndex = i;
-  game = new PacketGame(PACKET_LEVELS[i]);
+  game = new PacketGame(i < 0 ? customLevel : PACKET_LEVELS[i]);
   effects = [];
   paused = false;
   nukeArmed = 0;
   el("btn-nuke").classList.remove("armed");
   el("btn-pause").querySelector("span").textContent = t("ctl.pause");
-  store.set("packetrush.level", String(i));
+  if (i >= 0) store.set("packetrush.level", String(i));
   buildSkills();
   defaultSkill();
   updateHUD();
@@ -1789,6 +1818,14 @@ el("btn-class").onclick = openClass;
 applyTheme();
 applyText();
 applyView();
+/* index.html#lvl=<code> plays a shared level; #custom plays the editor's test level */
+let bootError = "";
+try {
+  const h = location.hash;
+  if (h.startsWith("#lvl=")) customLevel = decodeLevel(h);
+  else if (h === "#custom") customLevel = decodeLevel(store.get("packetrush.custom", ""));
+} catch (e) { customLevel = null; bootError = e.message; }
 const saved = Number(store.get("packetrush.level", "0"));
-startLevel(Math.min(Number.isFinite(saved) ? saved : 0, progress.unlocked - 1, PACKET_LEVELS.length - 1));
+startLevel(customLevel ? -1 : Math.min(Number.isFinite(saved) ? saved : 0, progress.unlocked - 1, PACKET_LEVELS.length - 1));
+if (bootError) el("skill-note").innerHTML = t("custom.bad", { why: escapeHtml(bootError) });
 requestAnimationFrame(t0 => { last = t0; requestAnimationFrame(loop); });

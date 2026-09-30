@@ -1,0 +1,36 @@
+/* Packet Rush level editor — on top of base.css and game.css */
+.editor {
+  max-width: 1180px; margin: 0 auto; padding: 16px;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 320px); gap: 16px; align-items: start;
+}
+.ed-stage, .ed-panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+.ed-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.ed-tool { font: inherit; font-size: 13px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.ed-tool i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.ed-tool[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cyan) 25%, transparent); }
+#ed-canvas { display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; border-radius: 8px; cursor: crosshair; touch-action: none; background: #0b1624; }
+.ed-hint { margin: 8px 0; font-size: 13px; color: var(--muted); min-height: 1.4em; }
+.ed-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ed-report { margin: 10px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.5; }
+.ed-report:empty { display: none; }
+.ed-report .ok { color: var(--green); }
+.ed-report .warn { color: var(--amber); }
+.ed-report .bad { color: var(--red); }
+.ed-note { font-size: 13px; color: var(--muted); min-height: 1.3em; margin: 8px 0 0; word-break: break-all; }
+.ed-panel { display: grid; gap: 10px; }
+.ed-panel h2 { font-size: 16px; }
+.ed-panel h3 { font-size: 13px; margin: 6px 0 0; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.ed-panel label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.ed-panel input, .ed-panel select, .ed-panel textarea {
+  font: inherit; font-size: 14px; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; min-width: 0;
+}
+.ed-panel input:focus, .ed-panel select:focus, .ed-panel textarea:focus { outline: none; border-color: var(--cyan); }
+.ed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ed-skills { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px; }
+.ed-skills label { font-size: 12px; }
+.ed-check { display: flex !important; align-items: center; gap: 8px !important; }
+.ed-botnet[hidden] { display: none; }
+.ed-load { display: flex; gap: 6px; }
+.ed-load select { flex: 1; }
+@media (max-width: 860px) { .editor { grid-template-columns: 1fr; } }

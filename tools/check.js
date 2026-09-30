@@ -210,6 +210,27 @@ PACKET_LEVELS.forEach((level, i) => {
   if (!C.readResultCode(code.slice(0, -1) + (code.endsWith("a") ? "b" : "a"), PACKET_LEVELS).error) problems.push("classroom: a tampered result code was accepted");
 }
 
+/* level codes: every level the editor can express survives encode → decode
+   and still plays exactly the same */
+{
+  const { encodeLevel, decodeLevel } = require("../js/codec.js");
+  for (const level of PACKET_LEVELS) {
+    if (level.servers || level.switches || level.links || level.session || level.dests || level.rateRange) continue;
+    const back = decodeLevel(encodeLevel(level));
+    const a = new PacketGame(level), b = new PacketGame(back);
+    while (a.state === "playing") a.step();
+    while (b.state === "playing") b.step();
+    if (a.saved !== b.saved || a.tick !== b.tick || a.lost !== b.lost) problems.push(`codec: ${level.id} plays differently after a round trip`);
+  }
+  const twice = decodeLevel(encodeLevel(decodeLevel(encodeLevel({ name: "N", goal: "" }))));
+  if (twice.goal.en !== "" || twice.name.en !== "N") problems.push("codec: name or goal changes when a level is sanitized twice");
+  let threw = false;
+  try { decodeLevel("PL1.not-json"); } catch (e) { threw = true; }
+  if (!threw) problems.push("codec: a damaged level code was accepted");
+  const wild = decodeLevel(encodeLevel({ count: 9999, need: -4, rate: 0, ttl: 1e9, hatch: { x: 9999, y: -9 }, terrain: Array(500).fill({ x: 1, y: 1, w: 1, h: 1 }) }));
+  if (wild.count > 40 || wild.need < 1 || wild.rate < 10 || wild.ttl > 600 || wild.hatch.x > 399 || wild.terrain.length > 200) problems.push("codec: out-of-range values are not clamped");
+}
+
 if (problems.length) {
   for (const p of problems) console.log("FAIL " + p);
   process.exit(1);

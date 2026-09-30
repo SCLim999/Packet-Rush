@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Packet Rush — level editor</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/game.css">
+<link rel="stylesheet" href="css/editor.css">
+</head>
+<body class="rush-bright">
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">&#10033;</span>
+    <div>
+      <h1 data-e="title">Level editor</h1>
+      <p data-e="tagline">Paint a network, place the router and the server, hand out skills — then test it and share the link.</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button id="btn-lang" class="btn">中文</button>
+    <a class="btn" href="index.html" data-e="back">Back to the game</a>
+  </div>
+</header>
+
+<main class="editor">
+  <section class="ed-stage">
+    <div id="tools" class="ed-tools" role="toolbar"></div>
+    <canvas id="ed-canvas" width="800" height="400" aria-label="level canvas"></canvas>
+    <p id="ed-hint" class="ed-hint"></p>
+    <div class="ed-actions">
+      <button id="btn-undo" class="btn" data-e="undo">Undo</button>
+      <button id="btn-check" class="btn" data-e="check">Check</button>
+      <button id="btn-test" class="btn btn-primary" data-e="test">Test play</button>
+      <button id="btn-share" class="btn" data-e="share">Copy share link</button>
+    </div>
+    <ul id="ed-report" class="ed-report"></ul>
+    <p id="ed-note" class="ed-note"></p>
+  </section>
+
+  <aside class="ed-panel">
+    <h2 data-e="settings">Level settings</h2>
+    <label><span data-e="name">Name</span><input id="f-name" maxlength="40"></label>
+    <label><span data-e="goal">Hint for players</span><textarea id="f-goal" rows="2" maxlength="400"></textarea></label>
+    <div class="ed-grid">
+      <label><span data-e="count">Packets</span><input id="f-count" type="number" min="1" max="40"></label>
+      <label><span data-e="need">Must deliver</span><input id="f-need" type="number" min="1" max="40"></label>
+      <label><span data-e="rate">Release gap (ticks)</span><input id="f-rate" type="number" min="10" max="200"></label>
+      <label><span data-e="ttl">TTL (seconds)</span><input id="f-ttl" type="number" min="10" max="600"></label>
+    </div>
+    <div class="ed-grid">
+      <label><span data-e="types">Packet type</span>
+        <select id="f-types">
+          <option value="" data-e="tPlain">Plain</option>
+          <option value="T" data-e="tTcp">TCP only</option>
+          <option value="U" data-e="tUdp">UDP only</option>
+          <option value="TU" data-e="tMix">TCP + UDP</option>
+        </select>
+      </label>
+      <label><span data-e="dir">Router sends</span>
+        <select id="f-dir">
+          <option value="1" data-e="right">Right</option>
+          <option value="-1" data-e="left">Left</option>
+        </select>
+      </label>
+    </div>
+    <h3 data-e="skills">Skills to hand out</h3>
+    <div id="f-skills" class="ed-skills"></div>
+    <div id="f-botnet" class="ed-botnet" hidden>
+      <h3 data-e="botnet">Botnet</h3>
+      <div class="ed-grid">
+        <label><span data-e="junk">Junk packets</span><input id="f-bcount" type="number" min="1" max="60"></label>
+        <label><span data-e="jrate">Junk gap (ticks)</span><input id="f-brate" type="number" min="10" max="200"></label>
+      </div>
+      <label class="ed-check"><input id="f-filter" type="checkbox"> <span data-e="filter">Firewalls drop junk only</span></label>
+    </div>
+    <h3 data-e="load">Start from</h3>
+    <div class="ed-load">
+      <select id="f-start"></select>
+      <button id="btn-start" class="btn" data-e="open">Open</button>
+    </div>
+    <label><span data-e="paste">…or paste a level code</span><input id="f-code" placeholder="PL1.…" spellcheck="false"></label>
+    <button id="btn-load" class="btn" data-e="loadCode">Load code</button>
+  </aside>
+</main>
+
+<script src="js/engine.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/codec.js"></script>
+<script src="js/editor.js"></script>
+</body>
+</html>
