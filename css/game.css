@@ -195,6 +195,11 @@ body.view-3d #world { visibility: hidden; }
 
 .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .ctl[aria-pressed="true"] { border-color: var(--amber); color: var(--amber); }
+.rate-box { display: inline-flex; align-items: center; gap: 4px; }
+.rate-box[hidden] { display: none; }
+.rate-box .ctl { min-width: 34px; font-size: 16px; font-weight: 700; padding-left: 8px; padding-right: 8px; }
+.rate-read { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.1; min-width: 44px; }
+.rate-read b { display: block; color: var(--amber); font-size: 14px; font-variant-numeric: tabular-nums; }
 .nuke:hover { border-color: var(--red); color: var(--red); }
 .nuke.armed { border-color: var(--red); background: color-mix(in srgb, var(--red) 22%, var(--panel)); color: var(--text); }
 
@@ -272,6 +277,24 @@ body.view-3d #world { visibility: hidden; }
 .help-skill b { color: var(--text); }
 
 .level-card .lv-best { font-size: 12px; color: var(--muted); }
+.level-card .lv-stars, .ov-stars { color: var(--amber); letter-spacing: 2px; }
+.level-card .lv-stars { display: block; font-size: 14px; margin-top: 2px; }
+.level-card .lv-stars .off, .ov-stars .off { color: var(--line); }
+.ov-stars { font-size: 30px; margin: -4px 0 6px; line-height: 1; }
+.ov-stars:empty { display: none; }
+.ov-stars small { display: block; font-size: 13px; letter-spacing: 0; color: var(--muted); margin-top: 6px; }
+.daily {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; align-items: center;
+  margin: 12px 0 4px; padding: 12px 14px; border-radius: 10px;
+  background: color-mix(in srgb, var(--amber) 12%, var(--panel-2));
+  border: 1px solid color-mix(in srgb, var(--amber) 55%, transparent);
+}
+.daily:empty { display: none; }
+.daily h3 { margin: 0; font-size: 14px; color: var(--amber); }
+.daily p { margin: 2px 0 0; font-size: 13px; color: var(--text); }
+.daily .streak { font-size: 12px; color: var(--muted); }
+.daily.done { border-color: var(--green); background: color-mix(in srgb, var(--green) 12%, var(--panel-2)); }
+.daily.done h3 { color: var(--green); }
 .level-card.locked { opacity: .45; cursor: not-allowed; }
 
 @media (max-width: 640px) {
@@ -424,3 +447,7 @@ body.pseudo-fs .rush {
     radial-gradient(900px 500px at 110% 10%, var(--glow-2) 0%, transparent 55%),
     var(--bg);
 }
+
+/* level cards: badge, name, best and stars stacked */
+.level-card { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 92px; }
+.level-card strong { font-size: 14px; line-height: 1.25; }

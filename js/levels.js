@@ -6,7 +6,8 @@
    feet position of the server port they must reach, `hazards` are live wires
 that short out any packet touching them, `rate` is the number of
    ticks between releases (20 ticks = one second), `ttl` is the time limit in
-   seconds. Every level is proven winnable by tools/check.js.
+   seconds. `par` sets the stars: saved = packets for two stars, skills = the
+   most skills for three, time = seconds allowed in the daily challenge. Every level is proven winnable by tools/check.js.
    ========================================================================== */
 
 const STEEL = 2;
@@ -98,6 +99,7 @@ const PACKET_LEVELS = [
     },
     name: { en: "Packet Drop", zh: "数据包下沉" },
     count: 10, need: 6, rate: 40, ttl: 150,
+    par: { saved: 10, skills: 1, time: 39 },
     hatch: { x: 120, y: 60 },
     exit: { x: 320, y: 149 },
     skills: { pipe: 2 },
@@ -125,6 +127,7 @@ const PACKET_LEVELS = [
     },
     name: { en: "Firewall", zh: "防火墙" },
     count: 10, need: 8, rate: 36, ttl: 120,
+    par: { saved: 9, skills: 1, time: 41 },
     hatch: { x: 230, y: 100 },
     exit: { x: 50, y: 139 },
     skills: { firewall: 1 },
@@ -150,6 +153,7 @@ const PACKET_LEVELS = [
     },
     name: { en: "Bridge the Gap", zh: "搭建网桥" },
     count: 10, need: 7, rate: 80, ttl: 150,
+    par: { saved: 10, skills: 1, time: 67 },
     hatch: { x: 60, y: 85 },
     exit: { x: 340, y: 129 },
     skills: { bridge: 3 },
@@ -175,6 +179,7 @@ const PACKET_LEVELS = [
     },
     name: { en: "Tunnel Vision", zh: "隧道穿越" },
     count: 10, need: 8, rate: 40, ttl: 150,
+    par: { saved: 10, skills: 1, time: 42 },
     hatch: { x: 70, y: 95 },
     exit: { x: 330, y: 139 },
     skills: { tunnel: 2 },
@@ -201,6 +206,7 @@ const PACKET_LEVELS = [
     },
     name: { en: "Uplink", zh: "上行链路" },
     count: 6, need: 5, rate: 50, ttl: 150,
+    par: { saved: 6, skills: 12, time: 50 },
     hatch: { x: 50, y: 120 },
     exit: { x: 320, y: 179 },
     skills: { uplink: 6, buffer: 6 },
@@ -227,6 +233,7 @@ const PACKET_LEVELS = [
     },
     name: { en: "Stack Overflow", zh: "栈溢出" },
     count: 10, need: 7, rate: 36, ttl: 180,
+    par: { saved: 8, skills: 2, time: 54 },
     hatch: { x: 240, y: 95 },
     exit: { x: 40, y: 139 },
     skills: { firewall: 1, overflow: 2 },
@@ -254,6 +261,7 @@ const PACKET_LEVELS = [
     },
     name: { en: "Full Stack", zh: "全栈" },
     count: 12, need: 8, rate: 70, ttl: 240,
+    par: { saved: 11, skills: 3, time: 72 },
     hatch: { x: 40, y: 50 },
     exit: { x: 340, y: 154 },
     skills: { bridge: 2, tunnel: 2, pipe: 2, firewall: 1 },
@@ -284,6 +292,7 @@ const PACKET_LEVELS = [
     },
     name: { en: "Best Effort", zh: "尽力而为" },
     count: 12, need: 8, rate: 55, ttl: 180,
+    par: { saved: 11, skills: 1, time: 57 },
     types: "TU",
     hatch: { x: 40, y: 85 },
     exit: { x: 350, y: 129 },
@@ -310,6 +319,7 @@ const PACKET_LEVELS = [
     },
     name: { en: "Man in the Middle", zh: "中间人攻击" },
     count: 10, need: 7, rate: 45, ttl: 200,
+    par: { saved: 10, skills: 2, time: 55 },
     types: "T",
     hatch: { x: 40, y: 75 },
     exit: { x: 276, y: 159 },
@@ -338,6 +348,7 @@ const PACKET_LEVELS = [
     },
     name: { en: "Denial of Service", zh: "拒绝服务" },
     count: 12, need: 7, rate: 50, ttl: 200,
+    par: { saved: 8, skills: 2, time: 53 },
     types: "TU",
     hatch: { x: 40, y: 95 },
     exit: { x: 330, y: 139 },
@@ -358,6 +369,67 @@ const PACKET_LEVELS = [
     note: {
       en: "A <b>distributed denial-of-service</b> (DDoS) attack uses thousands of hijacked machines — a botnet — to flood a server until it cannot answer real users. Defences filter the junk before it arrives: firewall rules, rate limits and scrubbing services that drop attack traffic and pass the rest.",
       zh: "<b>分布式拒绝服务</b>（DDoS）攻击利用成千上万台被劫持的机器 —— 僵尸网络 —— 向服务器发起洪水般的请求，直到它无法回应真实用户。防御的办法是在垃圾流量到达之前把它过滤掉：防火墙规则、限速，以及丢弃攻击流量、放行正常流量的清洗服务。"
+    }
+  },
+  {
+    id: "routing",
+    osi: [3],
+    osiWhy: {
+      en: "Routing is the Network layer's job: a router reads each packet's destination IP address and forwards it out of the right interface.",
+      zh: "路由是网络层的工作：路由器读取每个数据包的目的 IP 地址，并从正确的接口转发出去。"
+    },
+    name: { en: "Routing Table", zh: "路由表" },
+    count: 10, need: 8, rate: 64, ttl: 150,
+    par: { saved: 10, skills: 0, time: 52 },
+    dests: "ABBABAABBA",
+    hatch: { x: 200, y: 95 },
+    exit: { x: 40, y: 139 },
+    servers: [
+      { x: 40, y: 139, addr: "10.0.0.2" },
+      { x: 360, y: 139, addr: "10.0.0.3" }
+    ],
+    switches: [{ x: 200, y: 139, dir: 1 }],
+    skills: {},
+    terrain: [
+      { x: 0, y: 140, w: 400, h: 20 },
+      { x: 0, y: 160, w: 400, h: 40, m: STEEL }
+    ],
+    goal: {
+      en: "You are the router. Each packet's tag shows its destination: <b>cyan for 10.0.0.2</b> on the left, <b>pink for 10.0.0.3</b> on the right. Click the <b>route switch</b> under the router to point each packet the right way. A packet at the wrong server is lost.",
+      zh: "你就是路由器。每个数据包的标签表示它的目的地：<b>青色是 10.0.0.2</b>（左边），<b>粉色是 10.0.0.3</b>（右边）。点击路由器下方的<b>路由开关</b>，为每个数据包指明方向。送错服务器的数据包会丢失。"
+    },
+    note: {
+      en: "A <b>router</b> keeps a <b>routing table</b>: a list of destination networks and which way to send packets for each. For every packet it reads the destination <b>IP address</b>, finds the best match in the table and forwards the packet — millions of times a second, one hop at a time.",
+      zh: "<b>路由器</b>维护着一张<b>路由表</b>：列出各个目的网络以及发往该网络的数据包应走的方向。对每个数据包，它读取目的 <b>IP 地址</b>，在表中找到最佳匹配并转发 —— 每秒数百万次，一跳接一跳。"
+    }
+  },
+  {
+    id: "congestion",
+    osi: [4],
+    osiWhy: {
+      en: "Congestion control lives in the Transport layer: TCP watches for lost segments and slows its sending rate until the network can keep up.",
+      zh: "拥塞控制属于传输层：TCP 一旦发现有段丢失，就会降低发送速率，直到网络跟得上为止。"
+    },
+    name: { en: "Congestion Control", zh: "拥塞控制" },
+    count: 12, need: 10, rate: 16, ttl: 38,
+    par: { saved: 12, skills: 0, time: 38 },
+    rateRange: [10, 60],
+    types: "TU",
+    hatch: { x: 40, y: 95 },
+    exit: { x: 360, y: 139 },
+    links: [{ x: 140, y: 100, w: 140, h: 40, capacity: 3 }],
+    skills: {},
+    terrain: [
+      { x: 0, y: 140, w: 400, h: 20 },
+      { x: 0, y: 160, w: 400, h: 40, m: STEEL }
+    ],
+    goal: {
+      en: "The link in the middle carries <b>three packets at a time</b>; any more and the newest is dropped. The router is sending far too fast. Use the <b>− / +</b> release-rate buttons to space the packets out — but not so slowly that the TTL runs out.",
+      zh: "中间的链路<b>一次只能容纳三个数据包</b>，再多就会丢掉最新进入的那个。路由器发得太快了。用 <b>− / +</b> 发送速率按钮拉开数据包的间隔 —— 但也不能太慢，否则 TTL 会耗尽。"
+    },
+    note: {
+      en: "When more traffic arrives than a link can carry, routers queue it and then start dropping packets: <b>congestion</b>. TCP treats every loss as a signal to slow down, then speeds up gently while things go well — <b>congestion control</b>, which is why the Internet does not grind to a halt at peak time.",
+      zh: "当到达的流量超过链路的承载能力时，路由器先排队，然后开始丢包 —— 这就是<b>拥塞</b>。TCP 把每一次丢包都当作减速的信号，一切顺利时再慢慢加速 —— 这就是<b>拥塞控制</b>，也是互联网在高峰期不会瘫痪的原因。"
     }
   }
 ];

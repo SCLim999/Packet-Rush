@@ -379,6 +379,7 @@ function createRenderer3D(canvas) {
       box(b, x - 1.1, y - 13.6, 2.2, 1.4, 0, 0.6, rgb("#facc15"), 0.7);
     }
     if (p.retry) box(b, bx - 1.8, y - 8.5, 1, 2.2, 0, 1, rgb("#93c5fd"), 0.8);   // resent copy
+    if (p.dest !== undefined && !p.junk) box(b, bx + 1, y - 10.4, 5, 1.6, 0, 5.2, rgb(DEST_COLORS[p.dest]), 0.8);   // destination tag
     if (p.climber) box(b, bx, y - 3.2, 7, 0.8, 0, 5.3, rgb("#4ade80"), 0.6);
 
     if (p.state === "fall" && p.floater && p.fall >= 12) {
@@ -426,6 +427,16 @@ function createRenderer3D(canvas) {
     const b = objects, lv = game.level;
     router(b, lv.hatch, frame, "#45d0e0");
     if (game.botnet) router(b, game.botnet, frame, "#f87171");
+    /* congested links: a blue duct frame, red when full, with a load meter */
+    for (const l of game.links) {
+      const full = l.load >= l.capacity, c = rgb(full ? "#f87171" : "#38bdf8");
+      box(b, l.x, l.y, l.w, 0.6, 0, 18, c, 0.6);
+      box(b, l.x, l.y, 0.6, l.h, 0, 18, c, 0.6);
+      box(b, l.x + l.w - 0.6, l.y, 0.6, l.h, 0, 18, c, 0.6);
+      for (let i = 0; i < l.capacity; i++) {
+        box(b, l.x + l.w / 2 - l.capacity * 3 + i * 6, l.y + 2, 5, 2.5, 0, 3, i < l.load ? c : rgb("#475569"), i < l.load ? 1 : 0);
+      }
+    }
     /* man-in-the-middle zones: a red frame, a scan line and an eye above */
     for (const z of game.mitm) {
       const red = rgb("#f87171");
@@ -438,10 +449,31 @@ function createRenderer3D(canvas) {
       box(b, cx - 7, z.y - 9, 14, 7, 0, 3, rgb("#1e293b"));
       box(b, cx - 2 + Math.sin(frame / 25) * 3, z.y - 7.5, 4, 4, 1.6, 0.6, red, 1);
     }
-    /* server */
-    const ex = lv.exit;
+    /* servers */
+    game.servers.forEach((ex, si) => server(b, ex, si, game, frame));
+    /* route switches: a post and a sign with an arrow */
+    for (const s of game.switches) {
+      box(b, s.x - 0.5, s.y - 13, 1, 13, 0, 1, rgb("#334155"));
+      box(b, s.x - 6, s.y - 19, 12, 7, 0, 2, rgb("#1e293b"));
+      box(b, s.x - 6.2, s.y - 19.2, 12.4, 0.6, 0, 2.2, rgb("#facc15"), 0.8);
+      box(b, s.x + (s.dir > 0 ? -2 : -3), s.y - 16.4, 5, 1.6, 1.2, 0.6, rgb("#facc15"), 1);
+      box(b, s.x + (s.dir > 0 ? 3 : -5), s.y - 17.6, 2, 4, 1.2, 0.6, rgb("#facc15"), 1);
+    }
+    /* live wires */
+    for (const z of game.hazards) {
+      box(b, z.x, z.y, z.w, z.h, 0, 30, rgb("#0f172a"));
+      for (let x = z.x + 2; x < z.x + z.w - 1; x += 4) {
+        const up = ((x + frame) >> 2) % 2;
+        box(b, x, z.y + z.h - 5 + (up ? -2 : 2), 2, 1, 15.3, 0.4, rgb("#facc15"), 1);
+      }
+      if (frame % 6 < 3) box(b, z.x + ((frame * 37) % z.w), z.y + z.h - 7, 1.2, 1.2, 16, 1.2, rgb("#fef08a"), 1);
+    }
+  }
+
+  const DEST_COLORS = ["#22d3ee", "#f472b6", "#a3e635", "#fbbf24"];
+  function server(b, ex, si, game, frame) {
     box(b, ex.x - 9, ex.y - 22, 18, 23, -4, 18, rgb("#1e293b"));
-    box(b, ex.x - 9.2, ex.y - 22.2, 18.4, 0.8, -4, 18.4, rgb("#4ade80"), 0.8);
+    box(b, ex.x - 9.2, ex.y - 22.2, 18.4, 0.8, -4, 18.4, rgb(ex.addr ? DEST_COLORS[si] : "#4ade80"), 0.8);
     for (let i = 0; i < 3; i++) {
       box(b, ex.x - 7, ex.y - 20 + i * 3, 14, 2, 5.1, 0.4, rgb("#334155"));
       box(b, ex.x + 4, ex.y - 19.5 + i * 3, 1.5, 1, 5.4, 0.3, rgb((frame + i * 7) % 20 < 10 ? "#4ade80" : "#166534"), 1);
@@ -453,15 +485,6 @@ function createRenderer3D(canvas) {
       for (let i = 0; i < game.server.capacity; i++) {
         box(b, ex.x - 7 + i * 5, ex.y - 26, 4, 1.5, -4, 3, rgb(i < game.load ? "#fb923c" : "#334155"), i < game.load ? 0.9 : 0);
       }
-    }
-    /* live wires */
-    for (const z of game.hazards) {
-      box(b, z.x, z.y, z.w, z.h, 0, 30, rgb("#0f172a"));
-      for (let x = z.x + 2; x < z.x + z.w - 1; x += 4) {
-        const up = ((x + frame) >> 2) % 2;
-        box(b, x, z.y + z.h - 5 + (up ? -2 : 2), 2, 1, 15.3, 0.4, rgb("#facc15"), 1);
-      }
-      if (frame % 6 < 3) box(b, z.x + ((frame * 37) % z.w), z.y + z.h - 7, 1.2, 1.2, 16, 1.2, rgb("#fef08a"), 1);
     }
   }
 

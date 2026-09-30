@@ -55,6 +55,7 @@
     <span class="hud-stat"><span data-t="hud.in">Delivered</span> <b id="hud-in">0</b></span>
     <span class="hud-stat"><span data-t="hud.need">Need</span> <b id="hud-need">0</b></span>
     <span class="hud-stat"><span data-t="hud.lost">Lost</span> <b id="hud-lost">0</b></span>
+    <span class="hud-stat"><span data-t="hud.skills">Skills</span> <b id="hud-skills">0</b></span>
     <span class="hud-stat" id="hud-resent-box" hidden><span data-t="hud.resent">Resent</span> <b id="hud-resent">0</b></span>
     <span class="hud-stat" id="hud-server-box" hidden><span data-t="hud.server">Server</span> <b id="hud-server">online</b></span>
     <span class="hud-stat"><span data-t="hud.ttl">TTL</span> <b id="hud-ttl">0:00</b></span>
@@ -75,6 +76,7 @@
         <p id="ov-goal"></p>
         <div id="ov-note" class="ov-note"></div>
         <div id="ov-osi" class="ov-osi"></div>
+        <p id="ov-stars" class="ov-stars" aria-live="polite"></p>
         <div id="ov-stats" class="ov-stats"></div>
         <div class="overlay-buttons">
           <button id="ov-primary" class="btn btn-primary"></button>
@@ -91,6 +93,11 @@
       <button id="btn-fast" class="btn ctl" aria-pressed="false"><span data-t="ctl.fast">Fast</span> <kbd>F</kbd></button>
       <button id="btn-view" class="btn ctl"><span>View: 3D</span> <kbd>V</kbd></button>
       <button id="btn-full" class="btn ctl" aria-pressed="false"><span data-t="ctl.full">Full screen</span> <kbd>G</kbd></button>
+      <span id="rate-box" class="rate-box" hidden>
+        <button id="btn-rate-down" class="btn ctl" aria-label="Release slower">−</button>
+        <span class="rate-read"><span data-t="ctl.rate">Rate</span> <b id="rate-val">1.0s</b></span>
+        <button id="btn-rate-up" class="btn ctl" aria-label="Release faster">+</button>
+      </span>
       <button id="btn-restart" class="btn ctl"><span data-t="ctl.restart">Restart</span> <kbd>R</kbd></button>
       <button id="btn-nuke" class="btn ctl nuke"><span data-t="ctl.nuke">kill -9</span> <kbd>K</kbd></button>
     </div>
@@ -103,6 +110,7 @@
 <dialog id="levels-dialog">
   <h2 data-t="levels.title">Levels</h2>
   <p class="muted" data-t="levels.sub">Deliver enough packets to unlock the next network.</p>
+  <div id="daily" class="daily"></div>
   <div id="level-list" class="level-list"></div>
   <form method="dialog"><button class="btn" data-t="btn.close">Close</button></form>
 </dialog>

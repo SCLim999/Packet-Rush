@@ -31,7 +31,17 @@ const LOAD_DECAY_TICKS = 5 * TICK_HZ;  // the server sheds one unit of junk load
 const PACKET_KINDS = { T: "tcp", U: "udp" };
 /* Losses TCP recovers from. A firewall, an overflow or the clock are not
    the network dropping a packet, so they are not retransmitted. */
-const RETRANSMIT_ON = ["splat", "void", "short", "mitm", "refused"];
+const RETRANSMIT_ON = ["splat", "void", "short", "mitm", "refused", "congestion"];
+/* Congestion: a level may mark narrow `links`, each with a capacity. A packet
+   that enters a link already carrying that many packets is dropped. A level
+   with a `rateRange` lets the player slow the router down or speed it up
+   (ticks between releases), which is how TCP congestion control avoids it. */
+/* Routing: a level may list several `servers`, each with an address, and a
+   `dests` string (A, B, ...) cycled over releases saying where each packet
+   is going. Delivering to the wrong server loses the packet. Route
+   `switches` on the floor point walking packets left or right; clicking one
+   flips it and costs nothing. */
+const DEST_LETTERS = "ABCD";
 
 /* The skills, in toolbar order. `on` lists the states a skill can interrupt. */
 const SKILLS = [
@@ -65,6 +75,7 @@ class PacketGame {
     this.dirty = true;                       // terrain changed since last render
     this.events = [];                        // sounds and effects for the UI to drain
 
+    this.used = 0;                           // skills handed out, for the star rating
     this.resent = 0;                         // TCP retransmissions so far
     this.retx = [];                          // pending retransmissions: { due, id }
     /* enemies */
@@ -75,6 +86,40 @@ class PacketGame {
     this.load = 0;                           // junk packets the server is choking on
     this.downTicks = 0;                      // > 0 while the server is knocked offline
     this.outages = 0;
+    /* routing */
+    this.servers = level.servers ? level.servers.map(s => ({ ...s })) : [{ ...level.exit }];
+    this.switches = (level.switches || []).map(s => ({ ...s }));
+    this.flips = 0;
+    /* congestion */
+    this.links = (level.links || []).map(l => ({ ...l, load: 0 }));
+    this.drops = 0;
+  }
+
+  setRate(r) {
+    const range = this.level.rateRange;
+    if (!range || this.state !== "playing") return false;
+    const next = Math.max(range[0], Math.min(range[1], Math.round(r)));
+    if (next === this.rate) return false;
+    this.rate = next;
+    this.events.push({ type: "rate" });
+    return true;
+  }
+
+  /* route switch i, or the one nearest (x, y) within reach; returns it */
+  switchAt(x, y, reach = 10) {
+    let best = null, bestD = reach;
+    for (const s of this.switches) {
+      const d = Math.hypot(s.x - x, (s.y - 11) - y);      // the sign, 11 px above the floor
+      if (d <= bestD) { bestD = d; best = s; }
+    }
+    return best;
+  }
+  flip(s) {
+    if (!s || this.state !== "playing") return false;
+    s.dir = -s.dir;
+    this.flips++;
+    this.events.push({ type: "flip" });
+    return true;
   }
 
   /* ------------------------------------------------------------ terrain */
@@ -121,6 +166,7 @@ class PacketGame {
   assign(p, id) {
     if (!this.canAssign(p, id)) return false;
     this.skills[id]--;
+    this.used++;
     switch (id) {
       case "uplink": p.climber = true; break;
       case "buffer": p.floater = true; break;
@@ -164,10 +210,13 @@ class PacketGame {
     this.ticksLeft--;
 
     const lv = this.level;
-    if (!this.nuking && this.spawned < lv.count && (this.tick === 1 || (this.tick - 1) % this.rate === 0)) {
+    if (!this.nuking && this.spawned < lv.count && (this.tick === 1 || this.tick - (this.lastRelease || 1) >= this.rate)) {
+      this.lastRelease = this.tick;
       const id = this.spawned++;
       const kind = lv.types ? PACKET_KINDS[lv.types[id % lv.types.length]] : undefined;
-      this.packets.push(this.makePacket(id, lv.hatch, kind));
+      const p = this.makePacket(id, lv.hatch, kind);
+      if (lv.dests) p.dest = DEST_LETTERS.indexOf(lv.dests[id % lv.dests.length]);
+      this.packets.push(p);
       this.events.push({ type: "spawn" });
     }
     /* TCP retransmissions come back out of the same router */
@@ -175,6 +224,7 @@ class PacketGame {
       const r = this.retx.shift();
       const p = this.makePacket(r.id, lv.hatch, "tcp");
       p.retry = 1;
+      if (lv.dests) p.dest = DEST_LETTERS.indexOf(lv.dests[r.id % lv.dests.length]);
       this.packets.push(p);
       this.resent++;
       this.events.push({ type: "resend" });
@@ -191,6 +241,7 @@ class PacketGame {
     if (this.load > 0 && this.tick % LOAD_DECAY_TICKS === 0) this.load--;
 
     for (const p of this.packets) if (p.alive) this.update(p);
+    if (this.links.length) this.checkLinks();
 
     /* firewalls never move again, so once they are all that is left the run is over;
        junk traffic does not keep a level going */
@@ -205,11 +256,29 @@ class PacketGame {
     }
   }
 
+  /* packets entering a full link are dropped, newest first */
+  checkLinks() {
+    this.links.forEach((l, li) => {
+      const inside = this.packets.filter(p => p.alive && !p.junk &&
+        p.x >= l.x && p.x < l.x + l.w && p.y >= l.y && p.y < l.y + l.h);
+      const already = inside.filter(p => p.inLink === li);
+      const entering = inside.filter(p => p.inLink !== li);
+      let load = already.length;
+      for (const p of entering) {
+        if (load >= l.capacity) { this.drops++; this.kill(p, "congestion"); continue; }
+        p.inLink = li;
+        load++;
+      }
+      l.load = load;
+      for (const p of this.packets) if (p.inLink === li && !inside.includes(p)) p.inLink = -1;
+    });
+  }
+
   makePacket(id, at, kind) {
     return {
       id, x: at.x, y: at.y, dir: at.dir || 1, kind,
       state: "fall", fall: 0, climber: false, floater: false, bomb: 0,
-      bricks: 0, timer: 0, anim: 0, alive: true, retry: 0, encrypted: false, junk: false
+      bricks: 0, timer: 0, anim: 0, alive: true, retry: 0, encrypted: false, junk: false, lastSwitch: -1, inLink: -1
     };
   }
 
@@ -274,8 +343,17 @@ class PacketGame {
         if (p.x >= z.x && p.x < z.x + z.w && p.y >= z.y && p.y < z.y + z.h) { this.kill(p, "mitm"); return; }
       }
     }
-    const ex = this.level.exit;
-    if (p.state !== "block" && Math.abs(p.x - ex.x) <= 3 && p.y <= ex.y && p.y >= ex.y - 6) {
+    /* route switches point walking packets the way they are set */
+    for (let i = 0; i < this.switches.length; i++) {
+      const s = this.switches[i];
+      const near = Math.abs(p.x - s.x) <= 2 && Math.abs(p.y - s.y) <= 3;
+      if (near && p.state === "walk" && p.lastSwitch !== i) { p.dir = s.dir; p.lastSwitch = i; }
+      else if (!near && p.lastSwitch === i && Math.abs(p.x - s.x) > 4) p.lastSwitch = -1;
+    }
+    for (let si = 0; si < this.servers.length; si++) {
+      const ex = this.servers[si];
+      if (p.state === "block" || Math.abs(p.x - ex.x) > 3 || p.y > ex.y || p.y < ex.y - 6) continue;
+      if (!p.junk && p.dest !== undefined && p.dest !== si) { this.kill(p, "misrouted"); return; }
       p.alive = false;
       if (p.junk) {                           // junk eats server capacity
         this.events.push({ type: "junkin" });
@@ -290,7 +368,8 @@ class PacketGame {
       if (this.downTicks > 0) { p.alive = true; this.kill(p, "refused"); return; }
       p.saved = true;
       this.saved++;
-      this.events.push({ type: "saved" });
+      this.events.push({ type: "saved", server: si });
+      return;
     }
   }
 
@@ -402,6 +481,16 @@ class PacketGame {
   }
 }
 
+/* Stars. One for finishing; two for also delivering par.saved packets; three
+   for doing that with no more than par.skills skills. tools/check.js proves
+   every level's par is reachable. */
+function starsFor(level, saved, used, won) {
+  if (!won) return 0;
+  const par = level.par || { saved: level.need, skills: Infinity };
+  if (saved < par.saved) return 1;
+  return used <= par.skills ? 3 : 2;
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { PacketGame, SKILLS, M, LW, LH, TICK_HZ, SAFE_FALL, PACKET_KINDS };
+  module.exports = { PacketGame, SKILLS, M, LW, LH, TICK_HZ, SAFE_FALL, PACKET_KINDS, DEST_LETTERS, starsFor };
 }

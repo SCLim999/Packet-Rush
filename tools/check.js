@@ -10,7 +10,7 @@
    node tools/check.js          all levels
    node tools/check.js 3        just level 3, with a per-packet report */
 
-const { PacketGame, SKILLS, LW, LH, PACKET_KINDS } = require("../js/engine.js");
+const { PacketGame, SKILLS, LW, LH, PACKET_KINDS, DEST_LETTERS, starsFor, TICK_HZ } = require("../js/engine.js");
 const { PACKET_LEVELS, OSI_LAYERS, OSI_EXTRA, TCPIP_LAYERS } = require("../js/levels.js");
 
 const walking = (dir) => p => p.state === "walk" && (dir === undefined || p.dir === dir);
@@ -47,6 +47,8 @@ const SOLUTIONS = {
     { id: 0, skill: "bridge", when: p => walking(1)(p) && p.x >= 85 },
     { id: 0, skill: "firewall", when: p => walking(1)(p) && p.x >= 165 }
   ],
+  routing: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(id => ({ id, route: 0, when: p => p.state === "fall" })),
+  congestion: [{ rate: 36 }],
   stack: [
     { id: 0, skill: "bridge", when: p => walking(1)(p) && p.x >= 117 },
     { id: 0, skill: "tunnel", when: p => walking(1)(p) && p.x >= 195 },
@@ -62,7 +64,18 @@ function run(level, script, verbose) {
   while (g.state === "playing" && guard-- > 0) {
     for (const s of pending) {
       if (s.done) continue;
+      if (s.rate !== undefined) { g.setRate(s.rate); s.done = true; continue; }   // release rate, from the start
       const p = g.packets.find(q => q.id === s.id);
+      if (s.route !== undefined) {                 // point switch s.route at this packet's server
+        if (p && p.alive && s.when(p, g)) {
+          const sw = g.switches[s.route], srv = g.servers[p.dest];
+          const want = srv.x < sw.x ? -1 : 1;
+          if (sw.dir !== want) g.flip(sw);
+          s.done = true;
+          if (verbose) console.log(`  t=${g.tick} switch ${s.route} -> ${want > 0 ? "right" : "left"} for packet ${p.id}`);
+        }
+        continue;
+      }
       if (p && p.alive && s.when(p, g) && g.canAssign(p, s.skill)) {
         g.assign(p, s.skill);
         s.done = true;
@@ -126,6 +139,20 @@ PACKET_LEVELS.forEach((level, i) => {
     const b = level.botnet;
     if (!inside(b.x, b.y) || !(b.count > 0) || !(b.rate > 0)) problems.push(`${tag}: botnet needs a position on the map, a count and a rate`);
   }
+  /* routing */
+  if (level.servers) {
+    if (!level.servers.length || level.servers.some(sv => !inside(sv.x, sv.y + 1) || !sv.addr)) problems.push(`${tag}: every server needs a position and an address`);
+    if (level.servers[0].x !== level.exit.x || level.servers[0].y !== level.exit.y) problems.push(`${tag}: exit must be the first server`);
+    const probeS = new PacketGame(level);
+    for (const sv of level.servers) if (!probeS.solid(sv.x, sv.y + 1)) problems.push(`${tag}: nothing to stand on at server ${sv.addr}`);
+  }
+  if (level.dests !== undefined) {
+    const n = (level.servers || [level.exit]).length;
+    if ([...level.dests].some(c => !(DEST_LETTERS.indexOf(c) >= 0 && DEST_LETTERS.indexOf(c) < n))) problems.push(`${tag}: dests may only name its ${n} server(s)`);
+  }
+  for (const l of level.links || []) if (!(l.w > 0 && l.h > 0 && l.capacity >= 1) || !inside(l.x, l.y)) problems.push(`${tag}: a link needs a size on the map and a capacity`);
+  if (level.rateRange && !(level.rateRange[0] >= 1 && level.rateRange[0] <= level.rate && level.rate <= level.rateRange[1])) problems.push(`${tag}: rateRange must contain the starting rate`);
+  for (const sw of level.switches || []) if (!inside(sw.x, sw.y) || Math.abs(sw.dir) !== 1) problems.push(`${tag}: a route switch needs a position and a dir of 1 or -1`);
   if (level.firewallRule !== undefined && level.firewallRule !== "junk") problems.push(`${tag}: unknown firewallRule "${level.firewallRule}"`);
 
   const probe = new PacketGame(level);
@@ -139,11 +166,15 @@ PACKET_LEVELS.forEach((level, i) => {
   const script = SOLUTIONS[level.id];
   if (!script) { problems.push(`${tag}: no scripted solution in tools/check.js`); return; }
   const { g, unfired } = run(level, script, only !== null);
-  for (const s of unfired) problems.push(`${tag}: packet ${s.id} never got ${s.skill}`);
+  for (const s of unfired) problems.push(`${tag}: packet ${s.id} never got ${s.skill || "its route"}`);
   if (g.state !== "won") {
     problems.push(`${tag}: scripted run delivered ${g.saved}/${level.count}, needs ${level.need} (lost: ${JSON.stringify(g.losses)})`);
+  } else if (!level.par || !(level.par.saved >= level.need && level.par.saved <= level.count) || !(level.par.skills >= 0) || !(level.par.time > 0)) {
+    problems.push(`${tag}: par needs saved (between need and count), skills and time`);
+  } else if (starsFor(level, g.saved, g.used, true) < 3 || g.tick / TICK_HZ > level.par.time) {
+    problems.push(`${tag}: scripted run earns ${starsFor(level, g.saved, g.used, true)} stars in ${(g.tick / TICK_HZ).toFixed(1)}s — par (${JSON.stringify(level.par)}) is out of reach`);
   } else {
-    console.log(`ok  ${tag.padEnd(22)} delivered ${g.saved}/${level.count} (need ${level.need}) in ${(g.tick / 20).toFixed(1)}s; idle run ${idle.saved}/${level.count}`);
+    console.log(`ok  ${tag.padEnd(22)} delivered ${g.saved}/${level.count} (need ${level.need}) in ${(g.tick / 20).toFixed(1)}s, ${g.used} skills: ★★★; idle run ${idle.saved}/${level.count}`);
   }
 });
 

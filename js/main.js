@@ -44,6 +44,12 @@ const TEXT = {
     "loss.short": "shorted on a live wire", "loss.overflow": "overflowed",
     "loss.ttl": "TTL expired", "loss.firewall": "stayed on as a firewall",
     "loss.mitm": "intercepted by a man in the middle", "loss.refused": "refused by the overloaded server",
+    "hud.skills": "Skills", "loss.misrouted": "delivered to the wrong address", "loss.congestion": "dropped by a congested link",
+    "ctl.rate": "Release every",
+    "stars.need2": "Deliver {n} packets for ★★.", "stars.need3": "Use {n} skill(s) or fewer for ★★★.", "stars.all": "Perfect — every star earned.",
+    "daily.title": "Today's challenge", "daily.text": "Level {n} · {name}: earn ★★★ within {time}.",
+    "daily.play": "Play", "daily.locked": "Unlock level {n} to take it on.", "daily.done": "Challenge complete — come back tomorrow.",
+    "daily.streak": "Streak: {n} day(s)", "daily.won": "Daily challenge complete!", "daily.missed": "Daily challenge: ★★★ within {time} needed.",
     "hud.resent": "Resent", "hud.server": "Server", "server.up": "online", "server.down": "offline (503)",
     "fx.resend": "resent", "fx.down": "503 overloaded", "fx.up": "back online",
     "help.p4": "<b>Packet types:</b> blue packets are <b>TCP</b> — lost once, they are resent from the router. Orange packets are <b>UDP</b> — twice as fast, never resent. <b>Enemies:</b> red junk packets come from a <b>botnet</b> and knock the server offline when three get in; a red <b>man-in-the-middle</b> zone steals any packet that is not encrypted — a packet that tunnels carries a padlock and is safe.",
@@ -103,6 +109,12 @@ const TEXT = {
     "loss.short": "碰到带电导线短路", "loss.overflow": "溢出了",
     "loss.ttl": "TTL 耗尽", "loss.firewall": "留作防火墙",
     "loss.mitm": "被中间人截获", "loss.refused": "被过载的服务器拒绝",
+    "hud.skills": "技能", "loss.misrouted": "送到了错误的地址", "loss.congestion": "被拥塞的链路丢弃",
+    "ctl.rate": "发送间隔",
+    "stars.need2": "送达 {n} 个数据包可得 ★★。", "stars.need3": "使用不超过 {n} 次技能可得 ★★★。", "stars.all": "完美 —— 拿到了全部星星。",
+    "daily.title": "今日挑战", "daily.text": "第 {n} 关 · {name}：在 {time} 内拿到 ★★★。",
+    "daily.play": "开始", "daily.locked": "解锁第 {n} 关后即可挑战。", "daily.done": "挑战完成 —— 明天再来。",
+    "daily.streak": "连续：{n} 天", "daily.won": "今日挑战完成！", "daily.missed": "今日挑战：需要在 {time} 内拿到 ★★★。",
     "hud.resent": "重传", "hud.server": "服务器", "server.up": "在线", "server.down": "离线 (503)",
     "fx.resend": "重传", "fx.down": "503 过载", "fx.up": "恢复在线",
     "help.p4": "<b>数据包类型：</b>蓝色是 <b>TCP</b> —— 丢失一次会从路由器重新发送。橙色是 <b>UDP</b> —— 速度快一倍，但不会重传。<b>敌人：</b>红色垃圾包来自<b>僵尸网络</b>，三个进入服务器就会让它下线；红色的<b>中间人</b>区域会截获任何未加密的数据包 —— 挖过隧道的数据包带有锁形标志，是安全的。",
@@ -143,6 +155,30 @@ if (!["osi", "tcpip", "datacentre"].includes(backdrop)) backdrop = "osi";
 let progress;
 try { progress = JSON.parse(store.get("packetrush.progress", "")) || null; } catch (e) { progress = null; }
 if (!progress || typeof progress !== "object") progress = { unlocked: 1, best: {} };
+progress.stars = progress.stars || {};
+progress.daily = progress.daily || {};
+
+/* ------------------------------------------------------ daily challenge */
+/* One level a day, the same for everyone on that date: earn three stars
+   within the level's par time. */
+const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+function dailyLevel(key = todayKey()) {
+  let h = 2166136261;
+  for (const c of key) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return (h >>> 0) % PACKET_LEVELS.length;
+}
+function dailyStreak() {
+  let n = 0;
+  const d = new Date();
+  if (!progress.daily[todayKey()]) d.setDate(d.getDate() - 1);    // today not done yet: count up to yesterday
+  for (;;) {
+    const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (!progress.daily[k]) return n;
+    n++; d.setDate(d.getDate() - 1);
+  }
+}
+let dailyRun = false;                       // the current run was started from the challenge card
+const starText = n => "★".repeat(n) + `<span class="off">${"★".repeat(3 - n)}</span>`;
 
 function t(key, vars) {
   let s = (TEXT[lang] && TEXT[lang][key]) || TEXT.en[key] || key;
@@ -474,7 +510,7 @@ function drawRouter(h, accent = "#45d0e0") {
   ctx.fillRect(h.x - 5, y + 8, 10, 2);
 }
 
-function drawServer(ex) {
+function drawServer(ex, si = 0) {
   const x = ex.x - 9, y = ex.y - 22;
   ctx.fillStyle = "#1e293b";
   ctx.fillRect(x, y, 18, 23);
@@ -493,6 +529,13 @@ function drawServer(ex) {
   ctx.fillRect(ex.x - 4, ex.y - 11, 8, 12);
   ctx.fillStyle = "rgba(255,255,255,0.8)";
   ctx.fillRect(ex.x - 1, ex.y - 13, 2, 1);
+  if (ex.addr) {                                          // address plate in the server's colour
+    ctx.fillStyle = DEST_COLOR[si];
+    ctx.fillRect(x, y + 23, 18, 1.2);
+    ctx.font = "bold 5px ui-monospace, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(ex.addr, ex.x, y - (down ? 10 : 3));
+  }
   if (down) {
     ctx.fillStyle = "#f87171";
     ctx.font = "bold 7px ui-monospace, monospace";
@@ -533,6 +576,43 @@ function drawMitm(z) {
 }
 
 const KIND_COLOR = { tcp: "#93c5fd", udp: "#fdba74" };
+/* destination colours for routed levels: server A, B, C, D */
+const DEST_COLOR = ["#22d3ee", "#f472b6", "#a3e635", "#fbbf24"];
+
+/* A congestion-prone link: a duct with a load meter. */
+function drawLink(l) {
+  const full = l.load >= l.capacity;
+  ctx.fillStyle = full ? "rgba(248,113,113,0.12)" : "rgba(56,189,248,0.08)";
+  ctx.fillRect(l.x, l.y, l.w, l.h);
+  ctx.strokeStyle = full ? "rgba(248,113,113,0.8)" : "rgba(56,189,248,0.6)";
+  ctx.lineWidth = 0.6;
+  ctx.strokeRect(l.x + 0.3, l.y + 0.3, l.w - 0.6, l.h - 0.6);
+  for (let i = 0; i < l.capacity; i++) {
+    ctx.fillStyle = i < l.load ? (full ? "#f87171" : "#38bdf8") : "rgba(148,163,184,0.35)";
+    ctx.fillRect(l.x + l.w / 2 - l.capacity * 3 + i * 6, l.y + 3, 5, 2.5);
+  }
+  ctx.fillStyle = full ? "#f87171" : "#7dd3fc";
+  ctx.font = "bold 5px ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(`${l.load}/${l.capacity}`, l.x + l.w / 2, l.y + 11);
+}
+
+/* A route switch: a post with an arrow showing which way it sends packets. */
+function drawSwitch(s, hot) {
+  const col = hot ? "#ffffff" : "#facc15";
+  ctx.fillStyle = "#334155";
+  ctx.fillRect(s.x - 0.5, s.y - 13, 1, 13);
+  ctx.fillStyle = "#1e293b";
+  ctx.fillRect(s.x - 6, s.y - 19, 12, 7);
+  ctx.strokeStyle = col; ctx.lineWidth = 0.7;
+  ctx.strokeRect(s.x - 6, s.y - 19, 12, 7);
+  ctx.fillStyle = col;
+  ctx.beginPath();
+  const d = s.dir;
+  ctx.moveTo(s.x + d * 4.5, s.y - 15.5); ctx.lineTo(s.x + d * 0.5, s.y - 18); ctx.lineTo(s.x + d * 0.5, s.y - 13); ctx.closePath();
+  ctx.fill();
+  ctx.fillRect(s.x - d * 3.5 - (d > 0 ? 0 : 4), s.y - 16.2, 4, 1.4);
+}
 
 /* A tiny padlock for encrypted packets. */
 function drawLock(x, y) {
@@ -623,6 +703,10 @@ function drawPacket(p, highlight) {
     ctx.fillRect(bx + 3.5 + f * 1.8 - 0.5, by + 3.4, 1, 1);
   }
   if (p.encrypted) drawLock(x, by - 2.5);
+  if (p.dest !== undefined && !p.junk) {        // destination tag
+    ctx.fillStyle = DEST_COLOR[p.dest];
+    ctx.fillRect(bx + 1, by - 2, 5, 1.6);
+  }
   if (p.retry) {                            // a resent copy
     ctx.strokeStyle = "#93c5fd"; ctx.lineWidth = 0.5;
     ctx.beginPath(); ctx.arc(bx - 1.5, by + 1, 1.3, 0.3, Math.PI * 1.7); ctx.stroke();
@@ -780,13 +864,22 @@ function render3D() {
   }
   /* enemy labels: the outage over the server, the zone name */
   if (game.downTicks > 0) {
-    const [sx, sy] = at(game.level.exit.x, game.level.exit.y - 28, -4);
+    const [sx, sy] = at(game.servers[0].x, game.servers[0].y - 28, -4);
     fx.font = `bold ${Math.round(9 * unit)}px ui-monospace, monospace`;
     fx.lineWidth = 3 * dpr; fx.strokeStyle = "rgba(0,0,0,0.6)";
     fx.strokeText("503", sx, sy);
     fx.fillStyle = "#f87171";
     fx.fillText("503", sx, sy);
   }
+  game.servers.forEach((sv, i) => {                      // server addresses
+    if (!sv.addr) return;
+    const [sx, sy] = at(sv.x, sv.y - 26, -4);
+    fx.font = `bold ${Math.round(6 * unit)}px ui-monospace, monospace`;
+    fx.lineWidth = 3 * dpr; fx.strokeStyle = "rgba(0,0,0,0.55)";
+    fx.strokeText(sv.addr, sx, sy);
+    fx.fillStyle = DEST_COLOR[i];
+    fx.fillText(sv.addr, sx, sy);
+  });
   for (const z of game.mitm) {
     const [sx, sy] = at(z.x + z.w / 2, z.y + 6, 10);
     fx.font = `bold ${Math.round(6 * unit)}px ui-monospace, monospace`;
@@ -827,7 +920,10 @@ function render2D() {
   ctx.drawImage(terrainCanvas, 0, 0);
   for (const h of game.hazards) drawHazard(h);
   for (const z of game.mitm) drawMitm(z);
-  drawServer(game.level.exit);
+  for (const l of game.links) drawLink(l);
+  game.servers.forEach((sv, i) => drawServer(sv, i));
+  const hotSwitch = hover && running ? game.switchAt(hover.x, hover.y) : null;
+  for (const s of game.switches) drawSwitch(s, s === hotSwitch);
   drawRouter(game.level.hatch);
   if (game.botnet) drawRouter(game.botnet, "#f87171");
 
@@ -975,6 +1071,9 @@ function updateHUD() {
   el("hud-in").textContent = game.saved;
   el("hud-need").textContent = game.level.need;
   el("hud-lost").textContent = game.lost;
+  el("rate-box").hidden = !game.level.rateRange;
+  el("rate-val").textContent = (game.rate / TICK_HZ).toFixed(1) + "s";
+  el("hud-skills").textContent = game.level.par ? `${game.used}/${game.level.par.skills}` : game.used;
   el("hud-resent-box").hidden = !game.level.types;
   el("hud-resent").textContent = game.resent;
   el("hud-server-box").hidden = !game.botnet;
@@ -987,12 +1086,13 @@ function updateHUD() {
 }
 
 /* ------------------------------------------------------------ overlays */
-function overlay({ title, goal, note, stats, primary, secondary }) {
+function overlay({ title, goal, note, stats, stars, primary, secondary }) {
   el("ov-title").textContent = title;
   el("ov-goal").innerHTML = goal || "";
   el("ov-note").innerHTML = note ? `<h4>${t("ov.concept")}</h4>${note}` : "";
   renderOsiChips(note ? game.level : null);
   el("ov-stats").innerHTML = stats || "";
+  el("ov-stars").innerHTML = stars || "";
   const btn = (node, spec) => {
     node.style.display = spec ? "" : "none";
     if (spec) { node.textContent = spec[0]; node.onclick = spec[1]; }
@@ -1081,6 +1181,16 @@ function showResult() {
     + `<span>${t("stat.time")} <b>${fmtTime(game.tick)}</b></span>`
     + (losses ? `<span>${t("stat.lost")}: ${losses}</span>` : "");
   if (won) {
+    const stars = starsFor(lv, game.saved, game.used, true);
+    progress.stars[lv.id] = Math.max(progress.stars[lv.id] || 0, stars);
+    let starsHtml = starText(stars) + "<small>" + (stars === 3 ? t("stars.all")
+      : stars === 2 ? t("stars.need3", { n: lv.par.skills }) : t("stars.need2", { n: lv.par.saved })) + "</small>";
+    if (dailyRun && levelIndex === dailyLevel()) {
+      const inTime = game.tick / TICK_HZ <= lv.par.time;
+      if (stars === 3 && inTime) progress.daily[todayKey()] = true;
+      starsHtml += `<small>${stars === 3 && inTime ? "🏁 " + t("daily.won") + " · " + t("daily.streak", { n: dailyStreak() })
+        : t("daily.missed", { time: fmtTime(lv.par.time * TICK_HZ) })}</small>`;
+    }
     const prev = progress.best[lv.id] || 0;
     const newBest = game.saved > prev;
     if (newBest) progress.best[lv.id] = game.saved;
@@ -1093,6 +1203,7 @@ function showResult() {
         + (newBest && prev ? ` <b>${t("ov.newBest")}</b>` : ""),
       note: L(lv.note),
       stats,
+      stars: starsHtml,
       primary: last ? [t("ov.replay"), () => startLevel(levelIndex)] : [t("ov.next"), () => startLevel(levelIndex + 1)],
       secondary: last ? [t("ov.levels"), openLevels] : [t("ov.replay"), () => startLevel(levelIndex)]
     });
@@ -1116,7 +1227,8 @@ function togglePause() {
 }
 
 /* ---------------------------------------------------------------- flow */
-function startLevel(i, skipIntro) {
+function startLevel(i, skipIntro, fromDaily = false) {
+  dailyRun = fromDaily;
   levelIndex = i;
   game = new PacketGame(PACKET_LEVELS[i]);
   effects = [];
@@ -1137,7 +1249,7 @@ function drainEvents() {
       case "spawn": beep(880, 25, "square", 0.015); break;
       case "saved":
         beep(988, 60, "triangle", 0.04, 200);
-        effects.push({ kind: "text", text: "+1", x: game.level.exit.x, y: game.level.exit.y - 16, life: 40, color: "#4ade80" });
+        { const sv = game.servers[e.server || 0]; effects.push({ kind: "text", text: "+1", x: sv.x, y: sv.y - 16, life: 40, color: "#4ade80" }); }
         break;
       case "lost":
         if (e.why !== "overflow" && e.why !== "ttl" && e.why !== "firewall") {
@@ -1152,11 +1264,14 @@ function drainEvents() {
         break;
       case "down":
         beep(110, 400, "sawtooth", 0.06, -50);
-        effects.push({ kind: "text", text: t("fx.down"), x: game.level.exit.x, y: game.level.exit.y - 30, life: 70, color: "#f87171" });
+        effects.push({ kind: "text", text: t("fx.down"), x: game.servers[0].x, y: game.servers[0].y - 30, life: 70, color: "#f87171" });
         break;
       case "up":
         beep(700, 120, "triangle", 0.04, 200);
-        effects.push({ kind: "text", text: t("fx.up"), x: game.level.exit.x, y: game.level.exit.y - 30, life: 50, color: "#4ade80" });
+        effects.push({ kind: "text", text: t("fx.up"), x: game.servers[0].x, y: game.servers[0].y - 30, life: 50, color: "#4ade80" });
+        break;
+      case "flip":
+        beep(520, 40, "square", 0.03, 120);
         break;
       case "junkin": beep(200, 40, "square", 0.02); break;
       case "junkdown": burst(e.x, e.y - 4, ["#fca5a5", "#7f1d1d"], 6); break;
@@ -1200,6 +1315,8 @@ function worldPoint(ev) {
 function clickAt(pt, slack = 0) {
   if (!running || game.state !== "playing") return false;
   hover = pt;
+  const sw = game.switchAt(pt.x, pt.y, 10 + slack);
+  if (sw) { game.flip(sw); drainEvents(); return true; }
   const any = game.pick(pt.x, pt.y, null, slack);
   if (!selected) return !!any;
   if (game.skills[selected] <= 0) { el("skill-note").innerHTML = t("note.none", { skill: t("skill." + selected) }); return !!any; }
@@ -1379,6 +1496,9 @@ function toggleFast() {
 
 el("btn-pause").onclick = togglePause;
 el("btn-fast").onclick = toggleFast;
+const nudgeRate = d => { if (game && game.setRate(game.rate + d)) { beep(d > 0 ? 440 : 660, 30, "triangle", 0.03); updateHUD(); } };
+el("btn-rate-down").onclick = () => nudgeRate(4);     // longer gap = slower release
+el("btn-rate-up").onclick = () => nudgeRate(-4);
 el("btn-view").onclick = toggleView;
 el("btn-restart").onclick = () => startLevel(levelIndex, true);
 el("btn-nuke").onclick = nuke;
@@ -1392,6 +1512,8 @@ document.addEventListener("keydown", ev => {
   if (k === "p" || k === " " && running) { togglePause(); ev.preventDefault(); }
   else if (k === "f") toggleFast();
   else if (k === "v") toggleView();
+  else if (k === "-" || k === "_") nudgeRate(4);
+  else if (k === "=" || k === "+") nudgeRate(-4);
   else if (k === "g") toggleFull();
   else if (k === "escape" && pseudoFs) setPseudo(false);
   else if (k === "r") startLevel(levelIndex, true);
@@ -1400,16 +1522,33 @@ document.addEventListener("keydown", ev => {
 });
 
 /* ------------------------------------------------------------- dialogs */
+function renderDaily() {
+  const box = el("daily"), i = dailyLevel(), lv = PACKET_LEVELS[i], done = !!progress.daily[todayKey()];
+  const locked = i + 1 > progress.unlocked;
+  box.className = "daily" + (done ? " done" : "");
+  box.innerHTML = `<div><h3>🏁 ${t("daily.title")}</h3><p>${t("daily.text", { n: i + 1, name: L(lv.name), time: fmtTime(lv.par.time * TICK_HZ) })}</p>`
+    + `<span class="streak">${done ? t("daily.done") : locked ? t("daily.locked", { n: i + 1 }) : ""} ${t("daily.streak", { n: dailyStreak() })}</span></div>`;
+  if (!locked) {
+    const b = document.createElement("button");
+    b.className = "btn btn-primary";
+    b.textContent = t("daily.play");
+    b.onclick = () => { el("levels-dialog").close(); startLevel(i, false, true); };
+    box.append(b);
+  }
+}
+
 function openLevels() {
+  renderDaily();
   const list = el("level-list");
   list.innerHTML = "";
   PACKET_LEVELS.forEach((lv, i) => {
     const b = document.createElement("button");
     const locked = i + 1 > progress.unlocked;
     b.className = "level-card" + (locked ? " locked" : "");
-    const best = progress.best[lv.id];
+    const best = progress.best[lv.id], st = progress.stars[lv.id] || 0;
     b.innerHTML = `<span class="pill">${t("hud.level", { n: i + 1 })}</span><strong>${L(lv.name)}</strong>`
-      + `<span class="lv-best">${locked ? t("levels.locked") : best ? t("levels.best", { n: best, count: lv.count }) : t("levels.none")}</span>`;
+      + `<span class="lv-best">${locked ? t("levels.locked") : best ? t("levels.best", { n: best, count: lv.count }) : t("levels.none")}</span>`
+      + (locked ? "" : `<span class="lv-stars" aria-label="${st}/3">${starText(st)}</span>`);
     b.disabled = locked;
     b.onclick = () => { el("levels-dialog").close(); startLevel(i); };
     list.append(b);
