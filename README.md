@@ -21,7 +21,11 @@ code. Clone it and open `index.html`, or serve the folder anywhere static.
 
 Packets walk forward until they hit a wall, then turn around. They step up
 small ledges, but a long fall **corrupts** them and walking off the map
-**drops** them. Pick a skill in the toolbar (or press <kbd>1</kbd>–<kbd>7</kbd>),
+**drops** them. The sides of the screen are **striped boundary walls**
+that turn packets around, and every drop is marked on its lip with warning
+stripes and an arrow: **amber** where the fall is survivable, **red** (with a
+red line down the cliff) where it is deadly — too far, onto a live wire, or off
+the map. The markers update as packets dig, build and blast. Pick a skill in the toolbar (or press <kbd>1</kbd>–<kbd>7</kbd>),
 then click a packet to give it that job. Each level hands out a limited number
 of each skill.
 
@@ -252,6 +256,9 @@ every push and pull request.
 
 纯静态 HTML / CSS / JS：没有构建步骤，没有第三方依赖，也没有图片素材 —— 3D 视图由
 手写的 WebGL2 渲染器绘制。克隆后直接打开 `index.html` 即可。
+
+屏幕两侧是**条纹边界墙**，数据包碰到会掉头；每个落差处都有条纹和箭头标记：**琥珀色**表示可以安全落下，
+**红色**表示会致命（太高、落在带电导线上或掉出地图）。挖掘、搭桥和爆破后，标记会随之更新。
 
 **操作**：在工具栏选择技能（或按 <kbd>1</kbd>–<kbd>7</kbd>），再点击数据包分配工作。
 <kbd>P</kbd> 暂停，<kbd>F</kbd> 快进，<kbd>R</kbd> 重来，<kbd>V</kbd> 切换 3D / 2D，<kbd>G</kbd> 全屏，<kbd>M</kbd> 声音开关，

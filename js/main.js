@@ -72,7 +72,7 @@ const TEXT = {
     "note.pick": "Pick a skill, then click a packet to give it that job.",
     "note.none": "No <b>{skill}</b> left — try another skill.",
     "help.title": "How to play",
-    "help.p1": "Packets drop out of the <b>router</b> and walk forward until they hit a wall, then turn around. They step up small ledges, but a fall that is too long <b>corrupts</b> them, and walking off the edge of the map <b>drops</b> them.",
+    "help.p1": "Packets drop out of the <b>router</b> and walk forward until they hit a wall, then turn around. They step up small ledges, but a fall that is too long <b>corrupts</b> them, and walking off the edge of the map <b>drops</b> them. The <b>striped walls</b> at the sides of the screen turn packets around; an <b>arrow and stripes</b> mark every drop — <b>amber</b> if the fall is safe, <b>red</b> if it is deadly.",
     "help.p2": "Choose a skill in the toolbar (or press <kbd>1</kbd>–<kbd>7</kbd>), then click a packet to give it that job. Each level hands out a limited number of each skill. Get enough packets into the <b>server</b> before their <b>TTL</b> — time to live — runs out.",
     "help.p3": "<kbd>P</kbd> pause · <kbd>F</kbd> fast forward · <kbd>V</kbd> 3D / 2D view · <kbd>G</kbd> full screen · <kbd>M</kbd> sound on / off · <kbd>R</kbd> restart · <kbd>K</kbd> twice: <b>kill -9</b> ends the run by overflowing every packet.",
     "foot.text": "A Lemmings-style networking puzzle. Mouse, keyboard or touch — no install, no plugins.",
@@ -152,7 +152,7 @@ const TEXT = {
     "note.pick": "先选一个技能，再点击一个数据包，把这项工作交给它。",
     "note.none": "<b>{skill}</b>已经用完了 —— 换个技能试试。",
     "help.title": "玩法说明",
-    "help.p1": "数据包从<b>路由器</b>里掉出来，一直向前走，碰到墙就掉头。它们能迈上小台阶，但摔得太远会<b>损坏</b>，走出地图边缘会<b>丢失</b>。",
+    "help.p1": "数据包从<b>路由器</b>里掉出来，一直向前走，碰到墙就掉头。它们能迈上小台阶，但摔得太远会<b>损坏</b>，走出地图边缘会<b>丢失</b>。屏幕两侧的<b>条纹墙</b>会让数据包掉头；每个落差处都有<b>箭头和条纹</b>标记 —— <b>琥珀色</b>表示可以安全落下，<b>红色</b>表示会致命。",
     "help.p2": "在工具栏选择一个技能（或按 <kbd>1</kbd>–<kbd>7</kbd>），再点击一个数据包，把这项工作交给它。每关每种技能的数量有限。要在数据包的 <b>TTL</b>（生存时间）耗尽之前，把足够多的数据包送进<b>服务器</b>。",
     "help.p3": "<kbd>P</kbd> 暂停 · <kbd>F</kbd> 快进 · <kbd>V</kbd> 切换 3D / 2D · <kbd>G</kbd> 全屏 · <kbd>M</kbd> 声音开关 · <kbd>R</kbd> 重来 · 连按两次 <kbd>K</kbd>：<b>kill -9</b> 让所有数据包溢出，结束本局。",
     "foot.text": "旅鼠风格的网络解谜游戏。鼠标、键盘或触屏均可 —— 无需安装，无需插件。",
@@ -614,6 +614,49 @@ const KIND_COLOR = { tcp: "#93c5fd", udp: "#fdba74" };
 /* destination colours for routed levels: server A, B, C, D */
 const DEST_COLOR = ["#22d3ee", "#f472b6", "#a3e635", "#fbbf24"];
 
+/* Edges of the world. The screen sides are walls packets turn around at,
+   drawn as a striped boundary; every drop a packet would fall from gets
+   warning stripes on its lip — amber if the fall is survivable, red (with a
+   red line down the cliff) if it is deadly. */
+function drawBounds() {
+  for (const x of [0, LW - 3]) {
+    ctx.fillStyle = "#334155";
+    ctx.fillRect(x, 0, 3, LH);
+    for (let y = (frame >> 1) % 8 - 8; y < LH; y += 8) {
+      ctx.fillStyle = "#facc15";
+      ctx.beginPath();
+      ctx.moveTo(x, y); ctx.lineTo(x + 3, y + 3); ctx.lineTo(x + 3, y + 6); ctx.lineTo(x, y + 3); ctx.fill();
+    }
+    ctx.fillStyle = "rgba(69,208,224,0.7)";
+    ctx.fillRect(x === 0 ? 3 : x - 0.6, 0, 0.6, LH);
+  }
+}
+function drawEdges() {
+  for (const e of game.edges()) {
+    const x0 = e.dir > 0 ? e.x - 7 : e.x, hot = e.deadly ? "#ef4444" : "#f59e0b";
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = (i + (e.dir > 0 ? 0 : 1)) % 2 ? "#111827" : hot;
+      ctx.fillRect(x0 + i, e.y + 1, 1, 2);
+    }
+    /* a small arrow over the lip, pointing down the drop */
+    const ax = e.x + e.dir * 1.5, ay = e.y - 8 + Math.sin(frame / 6) * 1.2;
+    ctx.fillStyle = hot;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.moveTo(ax - 2.5, ay); ctx.lineTo(ax + 2.5, ay); ctx.lineTo(ax, ay + 3); ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    if (e.deadly) {
+      const lip = e.dir > 0 ? e.x + 1 : e.x - 0.6;
+      const len = Math.min(e.drop === Infinity ? 22 : e.drop, 22);
+      const g = ctx.createLinearGradient(0, e.y + 1, 0, e.y + 1 + len);
+      g.addColorStop(0, "rgba(239,68,68,0.9)"); g.addColorStop(1, "rgba(239,68,68,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(lip, e.y + 1, 0.6, len);
+    }
+  }
+}
+
 /* The handshake plate and the state of the session it controls. */
 function drawSession(se) {
   const pl = se.plate, on = se.ticks > 0;
@@ -975,6 +1018,8 @@ function render2D() {
   drawBackground(pal);
   ctx.drawImage(terrainCanvas, 0, 0);
   for (const h of game.hazards) drawHazard(h);
+  drawEdges();
+  drawBounds();
   for (const z of game.mitm) drawMitm(z);
   for (const l of game.links) drawLink(l);
   if (game.session) drawSession(game.session);

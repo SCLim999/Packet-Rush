@@ -73,6 +73,7 @@ class PacketGame {
     this.ticksLeft = level.ttl * TICK_HZ;
     this.state = "playing";                  // playing | won | lost
     this.dirty = true;                       // terrain changed since last render
+    this.mapVersion = 0;                     // bumped on every terrain change (edge markers cache on it)
     this.events = [];                        // sounds and effects for the UI to drain
 
     this.used = 0;                           // skills handed out, for the star rating
@@ -100,13 +101,51 @@ class PacketGame {
     if (this.session) this.setGate(false);
   }
 
+  /* Edges a walking packet would fall from: the end of every surface where
+     the ground drops away by more than a packet steps down. Each edge says
+     which way the drop is, how far it falls, and whether that fall is deadly
+     (further than SAFE_FALL, or straight off the map). Cached until the
+     terrain changes. */
+  edges() {
+    if (this._edges && this._edgesAt === this.mapVersion) return this._edges;
+    const out = [];
+    const drop = (x, y) => {                  // how far a packet falls stepping off at (x, y)
+      if (x < 0 || x >= LW) return 0;          // the screen edge is a wall
+      let d = 0;
+      while (y + d + 1 < LH && !this.solid(x, y + d + 1)) d++;
+      return y + d + 1 >= LH ? Infinity : d;
+    };
+    for (let y = 1; y < LH - 1; y++) {
+      for (let x = 0; x < LW; x++) {
+        if (this.solid(x, y) || !this.solid(x, y + 1)) continue;   // a surface pixel to stand on
+        for (const dir of [-1, 1]) {
+          const nx = x + dir;
+          if (nx < 0 || nx >= LW || this.solid(nx, y) || this.solid(nx, y + 1)) continue;
+          const d = drop(nx, y);
+          if (d <= 3) continue;                // a small step down, walked without falling
+          const land = y + d;                  // where it lands — on a live wire is as bad as too far
+          const shorts = d !== Infinity && this.hazards.some(h => nx >= h.x - 2 && nx < h.x + h.w + 2 && land >= h.y - 2 && land < h.y + h.h + 2);
+          out.push({ x, y, dir, drop: d, deadly: d > SAFE_FALL || shorts });
+        }
+      }
+    }
+    /* leave out ledges no packet can stand on: tops narrower than a packet,
+       and anything above the router unless packets can climb */
+    const climb = (this.level.skills && this.level.skills.uplink) || 0;
+    const run = e => { let w = 0; for (let x = e.x; x >= 0 && x < LW && !this.solid(x, e.y) && this.solid(x, e.y + 1) && w < 14; x -= e.dir) w++; return w; };
+    const shown = out.filter(e => run(e) >= 12 && (climb || e.y >= this.level.hatch.y - 2));
+    this._edges = shown;
+    this._edgesAt = this.mapVersion;
+    return shown;
+  }
+
   setGate(open) {
     const s = this.session, g = s.gate;
     for (let y = g.y; y < g.y + g.h; y++) for (let x = g.x; x < g.x + g.w; x++) {
       if (x >= 0 && x < LW && y >= 0 && y < LH) this.map[y * LW + x] = open ? M.EMPTY : M.GATE;
     }
     s.open = open;
-    this.dirty = true;
+    this.dirty = true; this.mapVersion++;
   }
 
   stepSession() {
@@ -182,7 +221,7 @@ class PacketGame {
     if (x < 0 || x >= LW || y < 0 || y >= LH) return false;
     const i = y * LW + x, v = this.map[i];
     if (v === M.STEEL || v === M.GATE) return true;
-    if (v !== M.EMPTY) { this.map[i] = M.EMPTY; this.dirty = true; }
+    if (v !== M.EMPTY) { this.map[i] = M.EMPTY; this.dirty = true; this.mapVersion++; }
     return false;
   }
 
@@ -482,7 +521,7 @@ class PacketGame {
       const bx = p.x + p.dir * i;
       if (bx >= 0 && bx < LW && p.y >= 0 && p.y < LH && this.map[p.y * LW + bx] === M.EMPTY) {
         this.map[p.y * LW + bx] = M.BRICK;
-        this.dirty = true;
+        this.dirty = true; this.mapVersion++;
       }
     }
     this.events.push({ type: "brick" });

@@ -429,6 +429,24 @@ function createRenderer3D(canvas) {
     const b = objects, lv = game.level;
     router(b, lv.hatch, frame, "#45d0e0");
     if (game.botnet) router(b, game.botnet, frame, "#f87171");
+    /* the screen sides: striped boundary walls packets turn around at */
+    for (const bx of [-2, LW]) {
+      box(b, bx, 0, 2, LH, 0, 34, rgb("#1e293b"));
+      for (let y = ((frame >> 1) % 16) - 16; y < LH; y += 16) box(b, bx, Math.max(0, y), 2, 6, 17.2, 0.4, rgb("#facc15"), 0.5);
+    }
+    /* drops: warning stripes along the lip, red ones (and a red line down
+       the cliff face) where the fall is deadly */
+    for (const e of game.edges()) {
+      const x0 = e.dir > 0 ? e.x - 5 : e.x, hot = rgb(e.deadly ? "#ef4444" : "#f59e0b");
+      for (let i = 0; i < 8; i += 2) box(b, x0 - (e.dir > 0 ? 2 : 0) + i + (e.dir > 0 ? 0 : 1), e.y + 0.6, 1, 0.8, 0, 31, hot, 0.9);
+      const bob = Math.sin(frame / 6) * 1.2;           // a marker hovering over the lip
+      box(b, e.x + e.dir * 1 - 1.5, e.y - 9 + bob, 3, 1.4, 0, 1.4, hot, 1);
+      box(b, e.x + e.dir * 1 - 0.75, e.y - 7.6 + bob, 1.5, 1.4, 0, 1.4, hot, 1);
+      if (e.deadly) {
+        const len = Math.min(e.drop === Infinity ? 24 : e.drop, 24);
+        box(b, e.dir > 0 ? e.x + 1 : e.x - 0.6, e.y + 1, 0.6, len, 15.6, 0.4, hot, 0.9);
+      }
+    }
     /* the handshake plate, lit while the session is alive */
     if (game.session) {
       const pl = game.session.plate, on = game.session.ticks > 0;
