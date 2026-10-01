@@ -429,11 +429,6 @@ function createRenderer3D(canvas) {
     const b = objects, lv = game.level;
     router(b, lv.hatch, frame, "#45d0e0");
     if (game.botnet) router(b, game.botnet, frame, "#f87171");
-    /* the screen sides: striped boundary walls packets turn around at */
-    for (const bx of [-2, LW]) {
-      box(b, bx, 0, 2, LH, 0, 34, rgb("#1e293b"));
-      for (let y = ((frame >> 1) % 16) - 16; y < LH; y += 16) box(b, bx, Math.max(0, y), 2, 6, 17.2, 0.4, rgb("#facc15"), 0.5);
-    }
     /* drops: warning stripes along the lip, red ones (and a red line down
        the cliff face) where the fall is deadly */
     for (const e of game.edges()) {

@@ -110,7 +110,6 @@ class PacketGame {
     if (this._edges && this._edgesAt === this.mapVersion) return this._edges;
     const out = [];
     const drop = (x, y) => {                  // how far a packet falls stepping off at (x, y)
-      if (x < 0 || x >= LW) return 0;          // the screen edge is a wall
       let d = 0;
       while (y + d + 1 < LH && !this.solid(x, y + d + 1)) d++;
       return y + d + 1 >= LH ? Infinity : d;
@@ -120,7 +119,7 @@ class PacketGame {
         if (this.solid(x, y) || !this.solid(x, y + 1)) continue;   // a surface pixel to stand on
         for (const dir of [-1, 1]) {
           const nx = x + dir;
-          if (nx < 0 || nx >= LW || this.solid(nx, y) || this.solid(nx, y + 1)) continue;
+          if (this.solid(nx, y) || this.solid(nx, y + 1)) continue;     // off the screen side counts as a drop
           const d = drop(nx, y);
           if (d <= 3) continue;                // a small step down, walked without falling
           const land = y + d;                  // where it lands — on a live wire is as bad as too far
@@ -209,7 +208,7 @@ class PacketGame {
   }
 
   at(x, y) {
-    if (x < 0 || x >= LW) return M.STEEL;    // the screen edges are walls
+    if (x < 0 || x >= LW) return M.EMPTY;    // no walls at the screen edges: walk off and you fall
     if (y < 0 || y >= LH) return M.EMPTY;
     return this.map[y * LW + x];
   }
@@ -410,7 +409,7 @@ class PacketGame {
     }
     if (!p.alive) return;
 
-    if (p.y >= LH + 8) { this.kill(p, "void"); return; }
+    if (p.y >= LH + 8 || p.x < -6 || p.x >= LW + 6) { this.kill(p, "void"); return; }
     for (const h of this.hazards) {
       if (p.x >= h.x && p.x < h.x + h.w && p.y >= h.y && p.y < h.y + h.h) { this.kill(p, "short"); return; }
     }

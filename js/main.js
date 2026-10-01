@@ -72,7 +72,7 @@ const TEXT = {
     "note.pick": "Pick a skill, then click a packet to give it that job.",
     "note.none": "No <b>{skill}</b> left — try another skill.",
     "help.title": "How to play",
-    "help.p1": "Packets drop out of the <b>router</b> and walk forward until they hit a wall, then turn around. They step up small ledges, but a fall that is too long <b>corrupts</b> them, and walking off the edge of the map <b>drops</b> them. The <b>striped walls</b> at the sides of the screen turn packets around; an <b>arrow and stripes</b> mark every drop — <b>amber</b> if the fall is safe, <b>red</b> if it is deadly.",
+    "help.p1": "Packets drop out of the <b>router</b> and walk forward until they hit a wall, then turn around. They step up small ledges, but a fall that is too long <b>corrupts</b> them, and walking off the edge of the map <b>drops</b> them. There are <b>no walls at the sides of the screen</b>: a packet that walks off the edge falls out of the network. An <b>arrow and stripes</b> mark every drop — <b>amber</b> if the fall is safe, <b>red</b> if it is deadly.",
     "help.p2": "Choose a skill in the toolbar (or press <kbd>1</kbd>–<kbd>7</kbd>), then click a packet to give it that job. Each level hands out a limited number of each skill. Get enough packets into the <b>server</b> before their <b>TTL</b> — time to live — runs out.",
     "help.p3": "<kbd>P</kbd> pause · <kbd>F</kbd> fast forward · <kbd>V</kbd> 3D / 2D view · <kbd>G</kbd> full screen · <kbd>M</kbd> sound on / off · <kbd>R</kbd> restart · <kbd>K</kbd> twice: <b>kill -9</b> ends the run by overflowing every packet.",
     "foot.text": "A Lemmings-style networking puzzle. Mouse, keyboard or touch — no install, no plugins.",
@@ -152,7 +152,7 @@ const TEXT = {
     "note.pick": "先选一个技能，再点击一个数据包，把这项工作交给它。",
     "note.none": "<b>{skill}</b>已经用完了 —— 换个技能试试。",
     "help.title": "玩法说明",
-    "help.p1": "数据包从<b>路由器</b>里掉出来，一直向前走，碰到墙就掉头。它们能迈上小台阶，但摔得太远会<b>损坏</b>，走出地图边缘会<b>丢失</b>。屏幕两侧的<b>条纹墙</b>会让数据包掉头；每个落差处都有<b>箭头和条纹</b>标记 —— <b>琥珀色</b>表示可以安全落下，<b>红色</b>表示会致命。",
+    "help.p1": "数据包从<b>路由器</b>里掉出来，一直向前走，碰到墙就掉头。它们能迈上小台阶，但摔得太远会<b>损坏</b>，走出地图边缘会<b>丢失</b>。<b>屏幕两侧没有墙</b>：走出边缘的数据包会掉出网络。每个落差处都有<b>箭头和条纹</b>标记 —— <b>琥珀色</b>表示可以安全落下，<b>红色</b>表示会致命。",
     "help.p2": "在工具栏选择一个技能（或按 <kbd>1</kbd>–<kbd>7</kbd>），再点击一个数据包，把这项工作交给它。每关每种技能的数量有限。要在数据包的 <b>TTL</b>（生存时间）耗尽之前，把足够多的数据包送进<b>服务器</b>。",
     "help.p3": "<kbd>P</kbd> 暂停 · <kbd>F</kbd> 快进 · <kbd>V</kbd> 切换 3D / 2D · <kbd>G</kbd> 全屏 · <kbd>M</kbd> 声音开关 · <kbd>R</kbd> 重来 · 连按两次 <kbd>K</kbd>：<b>kill -9</b> 让所有数据包溢出，结束本局。",
     "foot.text": "旅鼠风格的网络解谜游戏。鼠标、键盘或触屏均可 —— 无需安装，无需插件。",
@@ -1019,7 +1019,6 @@ function render2D() {
   ctx.drawImage(terrainCanvas, 0, 0);
   for (const h of game.hazards) drawHazard(h);
   drawEdges();
-  drawBounds();
   for (const z of game.mitm) drawMitm(z);
   for (const l of game.links) drawLink(l);
   if (game.session) drawSession(game.session);

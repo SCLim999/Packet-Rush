@@ -27,7 +27,7 @@ const CHALLENGE_LEVELS = [
     id: "dig-easy", category: "dig", difficulty: "easy", world: 3, osi: [3],
     name: { en: "Trapdoor", zh: "活板门" },
     count: 10, need: 7, rate: 40, ttl: 120,
-    par: { saved: 10, skills: 1, time: 40 },
+    par: { saved: 9, skills: 1, time: 40 },
     hatch: { x: 100, y: 60 }, exit: { x: 330, y: 149 },
     skills: { pipe: 1 },
     terrain: [
@@ -59,8 +59,8 @@ const CHALLENGE_LEVELS = [
   {
     id: "dig-difficult", category: "dig", difficulty: "difficult", world: 3, osi: [1, 3],
     name: { en: "Bedrock", zh: "基岩" },
-    count: 10, need: 8, rate: 32, ttl: 140,
-    par: { saved: 10, skills: 2, time: 60 },
+    count: 10, need: 7, rate: 32, ttl: 140,
+    par: { saved: 8, skills: 2, time: 60 },
     hatch: { x: 40, y: 75 }, exit: { x: 330, y: 171 },
     skills: { tunnel: 1, pipe: 1 },
     terrain: [
@@ -82,7 +82,7 @@ const CHALLENGE_LEVELS = [
     name: { en: "Demolition", zh: "爆破" },
     count: 10, need: 7, rate: 30, ttl: 120,
     par: { saved: 8, skills: 3, time: 70 },
-    hatch: { x: 220, y: 75 }, exit: { x: 70, y: 174 },
+    hatch: { x: 220, y: 75 }, exit: { x: 20, y: 174 },
     skills: { firewall: 1, overflow: 1, pipe: 1 },
     terrain: [
       { x: 0, y: 120, w: 330, h: 20 },
@@ -91,6 +91,7 @@ const CHALLENGE_LEVELS = [
       { x: 40, y: 130, w: 10, h: 10, m: 1 },
       { x: 110, y: 60, w: 6, h: 60 },
       { x: 60, y: 40, w: 120, h: 20, m: 2 },
+      { x: 0, y: 60, w: 8, h: 60, m: 2 },
       { x: 0, y: 175, w: 110, h: 25 }
     ],
     goal: { en: "Three moves, no spares: a <b>Firewall</b> before the cliff, an <b>Overflow</b> against the thin wall, and a <b>Pipe</b> through the only gap in the bedrock beyond it.", zh: "三步，没有备用：在悬崖前设<b>防火墙</b>，在薄墙旁<b>溢出</b>，再从墙后基岩唯一的缺口用<b>管道</b>挖下去。" },
