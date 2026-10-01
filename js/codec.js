@@ -63,6 +63,7 @@ function sanitizeLevel(raw) {
     const n = clampInt(r.skills && r.skills[id], 0, 99, 0);
     if (n) lv.skills[id] = n;
   }
+  if (r.unlimited === true) lv.unlimited = true;        // free play: every skill, unlimited
   if (typeof r.types === "string" && /^[TU]{1,12}$/.test(r.types)) lv.types = r.types;
   if (r.botnet && typeof r.botnet === "object") {
     lv.botnet = Object.assign(point(r.botnet, { x: 200, y: 80 }), {
@@ -82,6 +83,7 @@ function encodeLevel(level) {
     name: lv.name.en, goal: lv.goal.en, count: lv.count, need: lv.need, rate: lv.rate, ttl: lv.ttl,
     hatch: lv.hatch, exit: lv.exit, skills: lv.skills, terrain: lv.terrain
   };
+  if (lv.unlimited) out.unlimited = true;
   if (lv.hazards.length) out.hazards = lv.hazards;
   if (lv.mitm.length) out.mitm = lv.mitm;
   if (lv.types) out.types = lv.types;

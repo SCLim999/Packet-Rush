@@ -31,6 +31,7 @@
 .ed-skills label { font-size: 12px; }
 .ed-check { display: flex !important; align-items: center; gap: 8px !important; }
 .ed-botnet[hidden] { display: none; }
+.ed-skills.off { opacity: .4; pointer-events: none; }
 .ed-load { display: flex; gap: 6px; }
 .ed-load select { flex: 1; }
 @media (max-width: 860px) { .editor { grid-template-columns: 1fr; } }

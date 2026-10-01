@@ -242,6 +242,9 @@ ALL.forEach(({ level, n, tag, script }) => {
   }
   const twice = decodeLevel(encodeLevel(decodeLevel(encodeLevel({ name: "N", goal: "" }))));
   if (twice.goal.en !== "" || twice.name.en !== "N") problems.push("codec: name or goal changes when a level is sanitized twice");
+  const free = decodeLevel(encodeLevel({ unlimited: true }));
+  if (!free.unlimited || new PacketGame(free).skills.bridge !== Infinity) problems.push("codec: free play does not survive a round trip");
+  if (decodeLevel(encodeLevel({ skills: { pipe: 1 } })).unlimited) problems.push("codec: a level became free play by itself");
   let threw = false;
   try { decodeLevel("PL1.not-json"); } catch (e) { threw = true; }
   if (!threw) problems.push("codec: a damaged level code was accepted");

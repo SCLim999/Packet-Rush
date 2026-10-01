@@ -61,7 +61,8 @@ class PacketGame {
     for (const op of level.terrain) this.paint(op);
     this.hazards = level.hazards || [];
     this.skills = {};
-    for (const s of SKILLS) this.skills[s.id] = (level.skills && level.skills[s.id]) || 0;
+    /* free play (custom levels): every skill, never running out */
+    for (const s of SKILLS) this.skills[s.id] = level.unlimited ? Infinity : (level.skills && level.skills[s.id]) || 0;
     this.packets = [];
     this.tick = 0;
     this.spawned = 0;

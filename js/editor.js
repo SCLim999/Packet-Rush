@@ -27,6 +27,7 @@ const E = {
     "chk.idleLoses": "Doing nothing loses ({saved}/{need}) — it needs the player.", "chk.idleWins": "Doing nothing already wins ({saved}/{need}). Make it harder, or hand out fewer packets.",
     "chk.noGround": "The server is floating — put ground right under it.", "chk.inside": "The server is buried inside terrain.",
     "chk.noSkills": "No skills are handed out — make sure the level can be won without them.",
+    unlimited: "Every skill, unlimited (free play)", "chk.free": "Free play: players can use every skill as often as they like — they only need enough packets to survive.",
     "chk.hatchInside": "The router drops packets straight into terrain.",
     "note.copied": "Share link copied — anyone who opens it plays your level.", "note.copyFail": "Copy this link:",
     "note.loaded": "Level loaded.", "note.bad": "That code could not be read: {why}.", "note.shareHelp": "Share link:"
@@ -49,6 +50,7 @@ const E = {
     "chk.idleLoses": "不操作会失败（{saved}/{need}）—— 需要玩家动脑。", "chk.idleWins": "不操作就能过关（{saved}/{need}）。请增加难度或减少数据包。",
     "chk.noGround": "服务器悬空了 —— 在它正下方放上地面。", "chk.inside": "服务器被埋在地形里了。",
     "chk.noSkills": "没有分配任何技能 —— 请确认不用技能也能过关。",
+    unlimited: "所有技能，无限使用（自由模式）", "chk.free": "自由模式：玩家可以随意使用所有技能 —— 只要有足够的数据包存活送达即可。",
     "chk.hatchInside": "路由器把数据包直接投进了地形里。",
     "note.copied": "分享链接已复制 —— 任何人打开它都能玩你的关卡。", "note.copyFail": "请复制这个链接：",
     "note.loaded": "关卡已载入。", "note.bad": "无法读取这个代码：{why}。", "note.shareHelp": "分享链接："
@@ -80,7 +82,7 @@ const S = canvas.width / LW;
 function blankLevel() {
   return sanitizeLevel({
     name: "My network", count: 10, need: 7, rate: 40, ttl: 150,
-    hatch: { x: 50, y: 90 }, exit: { x: 350, y: 139 }, skills: { bridge: 2 },
+    hatch: { x: 50, y: 90 }, exit: { x: 350, y: 139 }, skills: { bridge: 2 }, unlimited: true,
     terrain: [{ x: 0, y: 140, w: 160, h: 20, m: 1 }, { x: 190, y: 140, w: 210, h: 20, m: 1 }, { x: 0, y: 160, w: 400, h: 40, m: 2 }]
   });
 }
@@ -219,6 +221,8 @@ function fillForm() {
   el("f-types").value = level.types || "";
   el("f-dir").value = String(level.hatch.dir || 1);
   for (const s of SKILLS) el("sk-" + s.id).value = level.skills[s.id] || 0;
+  el("f-unlimited").checked = !!level.unlimited;
+  el("f-skills").classList.toggle("off", !!level.unlimited);
   el("f-botnet").hidden = !level.botnet;
   if (level.botnet) {
     el("f-bcount").value = level.botnet.count; el("f-brate").value = level.botnet.rate;
@@ -233,6 +237,7 @@ function readForm() {
   raw.hatch.dir = Number(el("f-dir").value);
   raw.skills = {};
   for (const s of SKILLS) raw.skills[s.id] = el("sk-" + s.id).value;
+  raw.unlimited = el("f-unlimited").checked;
   if (raw.botnet) {
     raw.botnet.count = el("f-bcount").value; raw.botnet.rate = el("f-brate").value;
     raw.firewallRule = el("f-filter").checked ? "junk" : undefined;
@@ -260,7 +265,8 @@ function check() {
   if (!g.solid(ex.x, ex.y + 1)) { out.push(["bad", t("chk.noGround")]); fatal = true; }
   if (g.solid(ex.x, ex.y)) { out.push(["bad", t("chk.inside")]); fatal = true; }
   if (g.solid(level.hatch.x, level.hatch.y)) { out.push(["bad", t("chk.hatchInside")]); fatal = true; }
-  if (!Object.keys(level.skills).length) out.push(["warn", t("chk.noSkills")]);
+  if (level.unlimited) out.push(["ok", t("chk.free")]);
+  else if (!Object.keys(level.skills).length) out.push(["warn", t("chk.noSkills")]);
   if (!fatal) {
     out.unshift(["ok", t("chk.ok")]);
     const idle = new PacketGame(level);

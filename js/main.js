@@ -30,7 +30,7 @@ const TEXT = {
     "ctl.nukeConfirm": "Press again to end the run",
     "levels.title": "Levels", "levels.sub": "Deliver enough packets to unlock the next network.",
     "btn.class": "Class", "btn.editor": "Editor",
-    "hud.custom": "Custom", "ov.customIntro": "Custom level — {name}", "ov.edit": "Edit this level", "ov.customGoal": "Release {count} packets · deliver at least {need}",
+    "hud.custom": "Custom", "ov.freePlay": "Free play: every skill, unlimited — just get enough packets through alive.", "ov.customIntro": "Custom level — {name}", "ov.edit": "Edit this level", "ov.customGoal": "Release {count} packets · deliver at least {need}",
     "custom.bad": "This level link could not be opened: {why}. Playing level 1 instead.",
     "quiz.title": "Quick check", "quiz.layer": "Which OSI layer is the idea behind “{level}” on?",
     "quiz.pdu": "At layer {n}, {name}, what is the unit of data called?", "quiz.job": "Which layer does this job? “{job}”",
@@ -110,7 +110,7 @@ const TEXT = {
     "ctl.nukeConfirm": "再按一次结束本局",
     "levels.title": "关卡", "levels.sub": "送达足够的数据包即可解锁下一个网络。",
     "btn.class": "班级", "btn.editor": "编辑器",
-    "hud.custom": "自定义", "ov.customIntro": "自定义关卡 —— {name}", "ov.edit": "编辑这个关卡", "ov.customGoal": "发出 {count} 个数据包 · 至少送达 {need} 个",
+    "hud.custom": "自定义", "ov.freePlay": "自由模式：所有技能无限使用 —— 只要有足够的数据包存活送达。", "ov.customIntro": "自定义关卡 —— {name}", "ov.edit": "编辑这个关卡", "ov.customGoal": "发出 {count} 个数据包 · 至少送达 {need} 个",
     "custom.bad": "无法打开这个关卡链接：{why}。改为进入第 1 关。",
     "quiz.title": "小测验", "quiz.layer": "“{level}”背后的知识点属于 OSI 的哪一层？",
     "quiz.pdu": "第 {n} 层（{name}）的数据单位叫什么？", "quiz.job": "哪一层负责这项工作？“{job}”",
@@ -1137,7 +1137,7 @@ function buildSkills() {
 function updateSkills() {
   for (const b of el("skills").children) {
     const id = b.dataset.skill, n = game ? game.skills[id] : 0;
-    b.querySelector(".count").textContent = n;
+    b.querySelector(".count").textContent = n === Infinity ? "∞" : n;
     b.classList.toggle("empty", n <= 0);
     b.classList.toggle("selected", id === selected);
   }
@@ -1354,7 +1354,7 @@ function showIntro() {
   if (lv.custom) {
     overlay({
       title: t("ov.customIntro", { name: L(lv.name) }),
-      goal: `<b>${t("ov.customGoal", { count: lv.count, need: lv.need })}</b>` + (L(lv.goal) ? "<br>" + escapeHtml(L(lv.goal)) : ""),
+      goal: `<b>${t("ov.customGoal", { count: lv.count, need: lv.need })}</b>` + (lv.unlimited ? "<br>" + t("ov.freePlay") : "") + (L(lv.goal) ? "<br>" + escapeHtml(L(lv.goal)) : ""),
       primary: [t("ov.start"), hideOverlay],
       secondary: [t("ov.edit"), editCustom]
     });

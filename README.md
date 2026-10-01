@@ -157,7 +157,10 @@ and nothing is uploaded.
 written — rectangles of silicon, steel or empty space — and places the router,
 the server, live wires, man-in-the-middle zones and a botnet. Set the packet
 count and target, the release gap, the time limit, the packet types and how
-many of each skill to hand out. **Check** runs the real engine: it catches a
+many of each skill to hand out — or tick **Every skill, unlimited (free
+play)**, on by default for new levels, so players can use any skill as often
+as they like and only need to get enough packets through alive (every skill
+shows ∞). **Check** runs the real engine: it catches a
 floating or buried server and warns when the level wins with no skills.
 **Test play** opens it in the game; **Copy share link** gives a link
 (`index.html#lvl=<code>`) that anyone can open to play it. Custom levels never
@@ -285,7 +288,8 @@ TCP 段与端口、在路由器之间跳转的数据包、以太网帧、比特�
 粘贴成绩码即可为全班排名并导出 CSV。全程无需服务器，不上传任何数据。
 
 **关卡编辑器**：在[编辑器](editor.html)中绘制硅层、钢板和空洞，放置路由器、服务器、带电
-导线、中间人区域和僵尸网络，设置数量、目标、间隔、时限、数据包类型和技能；「检查」会用真实
+导线、中间人区域和僵尸网络，设置数量、目标、间隔、时限、数据包类型和技能；勾选「所有技能，无限使用（自由模式）」后（新关卡默认开启），玩家可以随意使用任何技能，只要有足够的
+数据包存活送达即可。「检查」会用真实
 引擎验证关卡，「试玩」直接进入游戏，「复制分享链接」生成任何人都能打开的关卡链接。
 
 **挑战包**：在「关卡 → 挑战包」中有 16 个额外关卡，分为挖掘与隧道、架桥与攀爬、路由与拥塞、
