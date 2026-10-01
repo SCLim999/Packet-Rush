@@ -7,11 +7,14 @@
    A second run with no assignments at all must lose — otherwise the level is
    not a puzzle.
 
-   node tools/check.js          all levels
-   node tools/check.js 3        just level 3, with a per-packet report */
+   node tools/check.js            all levels, campaign and challenge pack
+   node tools/check.js 3          just campaign level 3, with a per-packet report
+   node tools/check.js dig-hard   just one level by id */
 
 const { PacketGame, SKILLS, LW, LH, PACKET_KINDS, DEST_LETTERS, starsFor, TICK_HZ } = require("../js/engine.js");
 const { PACKET_LEVELS, OSI_LAYERS, OSI_EXTRA, TCPIP_LAYERS } = require("../js/levels.js");
+const { CHALLENGE_LEVELS, CATEGORIES, DIFFICULTIES } = require("../js/challenges.js");
+const CHALLENGE_SOLUTIONS = require("./challenge-solutions.js");
 
 const walking = (dir) => p => p.state === "walk" && (dir === undefined || p.dir === dir);
 
@@ -71,13 +74,15 @@ function run(level, script, verbose) {
       if (s.done) continue;
       if (s.rate !== undefined) { g.setRate(s.rate); s.done = true; continue; }   // release rate, from the start
       const p = g.packets.find(q => q.id === s.id);
-      if (s.route !== undefined) {                 // point switch s.route at this packet's server
-        if (p && p.alive && s.when(p, g)) {
-          const sw = g.switches[s.route], srv = g.servers[p.dest];
-          const want = srv.x < sw.x ? -1 : 1;
+      if (s.route !== undefined) {                 // point switch s.route at this packet's server —
+        s.seen = s.seen || new Set();              // once for the packet and once for a resent copy
+        for (const q of g.packets) {
+          if (q.id !== s.id || !q.alive || s.seen.has(q) || !s.when(q, g)) continue;
+          const sw = g.switches[s.route], srv = g.servers[q.dest];
+          const want = s.want ? s.want(q, g) : srv.x < sw.x ? -1 : 1;
           if (sw.dir !== want) g.flip(sw);
-          s.done = true;
-          if (verbose) console.log(`  t=${g.tick} switch ${s.route} -> ${want > 0 ? "right" : "left"} for packet ${p.id}`);
+          s.seen.add(q);
+          if (verbose) console.log(`  t=${g.tick} switch ${s.route} -> ${want > 0 ? "right" : "left"} for packet ${q.id}${q.retry ? " (resent)" : ""}`);
         }
         continue;
       }
@@ -89,15 +94,24 @@ function run(level, script, verbose) {
     }
     g.step();
   }
-  const unfired = pending.filter(s => !s.done);
+  /* route entries only fire for packets that actually reach that switch */
+  const unfired = pending.filter(s => !s.done && s.route === undefined);
   if (verbose) {
     for (const p of g.packets) console.log(`  packet ${p.id}: ${p.saved ? "delivered" : p.death || p.state} at (${p.x},${p.y})`);
   }
   return { g, unfired, budget };
 }
 
-const only = process.argv[2] ? Number(process.argv[2]) : null;
+const arg = process.argv[2] || null;
+const only = arg && /^\d+$/.test(arg) ? Number(arg) : arg;
 const problems = [];
+
+/* the challenge pack: every category has one level of every difficulty, in order */
+for (const c of CATEGORIES) for (const d of DIFFICULTIES) {
+  const n = CHALLENGE_LEVELS.filter(l => l.category === c.id && l.difficulty === d.id).length;
+  if (n !== 1) problems.push(`challenges: ${c.id} has ${n} ${d.id} level(s), expected 1`);
+}
+for (const l of CHALLENGE_LEVELS) if (PACKET_LEVELS.some(p => p.id === l.id)) problems.push(`challenges: id ${l.id} clashes with a campaign level`);
 
 /* the campaign: every OSI layer has a world with at least one level */
 for (let n = 1; n <= 7; n++) if (!PACKET_LEVELS.some(l => l.world === n)) problems.push(`campaign: OSI layer ${n} has no levels`);
@@ -115,9 +129,14 @@ const covered = TCPIP_LAYERS.flatMap(l => l.osi).sort().join();
 if (covered !== "1,2,3,4,5,6,7") problems.push(`TCP/IP: layers cover OSI ${covered}, expected 1-7 once each`);
 for (const l of TCPIP_LAYERS) if (!l.name.en || !l.name.zh || !l.job.en || !l.job.zh) problems.push(`TCP/IP ${l.name.en}: needs both languages`);
 
-PACKET_LEVELS.forEach((level, i) => {
-  if (only && only !== i + 1) return;
-  const tag = `level ${i + 1} (${level.id})`;
+const ALL = [
+  ...PACKET_LEVELS.map((level, i) => ({ level, n: i + 1, tag: `level ${i + 1} (${level.id})`, script: SOLUTIONS[level.id] })),
+  ...CHALLENGE_LEVELS.map(level => ({ level, n: null, tag: `challenge ${level.id}`, script: CHALLENGE_SOLUTIONS[level.id] }))
+];
+let checked = 0;
+ALL.forEach(({ level, n, tag, script }) => {
+  if (only !== null && only !== n && only !== level.id) return;
+  checked++;
 
   /* the level itself */
   const inside = (x, y) => x >= 0 && x < LW && y >= 0 && y < LH;
@@ -176,8 +195,7 @@ PACKET_LEVELS.forEach((level, i) => {
   if (idle.state === "won") problems.push(`${tag}: wins with no skills used (${idle.saved}/${level.count})`);
 
   /* the scripted solution must win */
-  const script = SOLUTIONS[level.id];
-  if (!script) { problems.push(`${tag}: no scripted solution in tools/check.js`); return; }
+  if (!script) { problems.push(`${tag}: no scripted solution`); return; }
   const { g, unfired } = run(level, script, only !== null);
   for (const s of unfired) problems.push(`${tag}: packet ${s.id} never got ${s.skill || "its route"}`);
   if (g.state !== "won") {
@@ -235,4 +253,4 @@ if (problems.length) {
   for (const p of problems) console.log("FAIL " + p);
   process.exit(1);
 }
-console.log(`All ${only ? 1 : PACKET_LEVELS.length} Packet Rush level(s) check out.`);
+console.log(`All ${checked} Packet Rush level(s) check out (${PACKET_LEVELS.length} campaign, ${CHALLENGE_LEVELS.length} challenge).`);

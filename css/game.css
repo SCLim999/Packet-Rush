@@ -484,6 +484,16 @@ body.pseudo-fs .rush {
 .world-head .wstars { margin-left: auto; font-size: 12px; color: var(--amber); }
 .world-levels { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
 
+/* challenge pack: categories down, difficulties across */
+.level-list.challenges { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.ch-intro { margin: 0; font-size: 13px; color: var(--muted); }
+.ch-cat h3 { margin: 0 0 6px; font-size: 15px; display: flex; gap: 8px; align-items: baseline; }
+.ch-cat h3 .wstars { margin-left: auto; font-size: 12px; color: var(--amber); font-weight: 400; }
+.ch-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.ch-row .level-card { border-top: 3px solid var(--diff); min-height: 96px; }
+.ch-row .diff { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--diff); }
+@media (max-width: 600px) { .ch-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 /* level cards: badge, name, best and stars stacked */
 .level-card { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-height: 92px; }
 .level-card strong { font-size: 14px; line-height: 1.25; }

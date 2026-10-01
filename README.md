@@ -89,6 +89,26 @@ unlocks the next one on that browser.
 The level list can show them **by OSI layer** — seven worlds climbing the
 stack from Physical to Application, each with its stars — or in order.
 
+### The Challenge Pack
+
+Sixteen extra levels outside the campaign (*Levels → Challenge Pack*): four
+categories, each with an **Easy**, **Intermediate**, **Difficult** and
+**Insane** level. Easy is always open; clearing a level unlocks the next one in
+its row, and challenge stars are kept separately from the campaign.
+
+| Category | Easy | Intermediate | Difficult | Insane |
+|---|---|---|---|---|
+| ⛏ Dig & Tunnel | Trapdoor — one pipe | Under the Wall — pipe, then tunnel under steel | Bedrock — tunnel, then pipe through the one gap in the bedrock | Demolition — firewall, overflow and pipe, no spares |
+| 🌉 Bridges & Climbs | Mind the Gap — one bridge | Two Hops — one packet bridges twice | Up and Over — uplinks for everyone, a bridge at the top | Staircase — four bridges over live wires, one chained |
+| 🧭 Routing & Congestion | Left or Right — one switch | Three Subnets — two switches, three servers | Rush Hour — routing plus a congested link | Backbone — three servers, a one-packet link, UDP |
+| 🛡 Security | Edge Firewall — one firewall | Public Wi-Fi — tunnel past the eavesdropper (uplinks are a trap) | Botnet — a weaker server and a bigger flood | Zero Trust — botnet, eavesdropper and UDP together |
+
+They live in `js/challenges.js`; their scripted solutions are in
+`tools/challenge-solutions.js` (kept out of the game so the answers are not
+shipped), and `node tools/check.js` proves each one winnable, not
+self-winning and three-star reachable — `node tools/check.js dig-insane`
+checks one by id.
+
 ### Stars and the daily challenge
 
 Every level awards up to three stars: **★** for finishing, **★★** for
@@ -185,6 +205,7 @@ panel:
 | `css/game.css` | the five themes and everything specific to Packet Rush |
 | `js/engine.js` | deterministic, tick-based simulation: pixel terrain, packets, skills |
 | `js/levels.js` | **the levels** — rectangles of silicon and steel, hazards, skill budgets, concept notes, OSI tags — plus the OSI and TCP/IP reference text |
+| `js/challenges.js`, `tools/challenge-solutions.js` | the Challenge Pack and its proven solutions |
 | `js/backdrop.js` | the data centre behind the play area, shared by both views |
 | `js/layers.js` | the OSI / TCP/IP layer bands, their animations and the encapsulation message |
 | `js/render3d.js` | the 3D view: a WebGL2 renderer built from one instanced cube, camera and picking |
@@ -255,6 +276,10 @@ TCP 段与端口、在路由器之间跳转的数据包、以太网帧、比特�
 **关卡编辑器**：在[编辑器](editor.html)中绘制硅层、钢板和空洞，放置路由器、服务器、带电
 导线、中间人区域和僵尸网络，设置数量、目标、间隔、时限、数据包类型和技能；「检查」会用真实
 引擎验证关卡，「试玩」直接进入游戏，「复制分享链接」生成任何人都能打开的关卡链接。
+
+**挑战包**：在「关卡 → 挑战包」中有 16 个额外关卡，分为挖掘与隧道、架桥与攀爬、路由与拥塞、
+网络安全四个类别，每类各有简单、中等、困难、疯狂四种难度。简单级始终开放，通关后解锁同一行的
+下一个难度。每个关卡都经过检查程序验证：可以通关、不操作会失败、并且能拿到三颗星。
 
 **手机与平板**：点选技能后点击数据包即可，触屏的点击范围更大。竖屏时技能排成网格，
 横屏时棋盘在左、技能栏在右。3D 视图可双指缩放。**全屏**按钮会隐藏菜单栏；安卓和电脑上

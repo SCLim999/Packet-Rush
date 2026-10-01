@@ -39,7 +39,9 @@ const TEXT = {
     "class.name": "Your name", "class.code": "Class code", "class.result": "Your result code", "class.copy": "Copy result code",
     "class.teacher": "Teacher page", "class.copied": "Copied — paste it wherever your teacher asked.", "class.copyFail": "Could not copy automatically — the code is selected, copy it yourself.",
     "class.needName": "Type your name first.", "class.stars": "Stars", "class.cleared": "Levels cleared", "class.quiz": "Quiz", "class.streak": "Daily streak",
-    "levels.byLayer": "By OSI layer", "levels.inOrder": "In order", "levels.worldStars": "★ {n}/{max}",
+    "levels.byLayer": "By OSI layer", "levels.inOrder": "In order", "levels.challenges": "Challenge Pack",
+    "ch.intro": "Four categories, four difficulties each. Easy is always open; clear a level to unlock the next one in its row.",
+    "ch.title": "{cat} · {diff} — {name}", "ch.locked": "clear {prev} first", "ch.hud": "{diff}", "ch.next": "Next: {diff}", "levels.worldStars": "★ {n}/{max}",
     "levels.best": "best {n}/{count}", "levels.none": "not delivered yet", "levels.locked": "locked",
     "ov.intro": "Level {n} — {name}", "ov.start": "Start",
     "ov.goal": "Release {count} packets · deliver at least {need}",
@@ -116,7 +118,9 @@ const TEXT = {
     "class.name": "你的名字", "class.code": "班级代码", "class.result": "你的成绩码", "class.copy": "复制成绩码",
     "class.teacher": "教师页面", "class.copied": "已复制 —— 粘贴到老师指定的地方即可。", "class.copyFail": "无法自动复制 —— 成绩码已选中，请手动复制。",
     "class.needName": "请先输入你的名字。", "class.stars": "星星", "class.cleared": "已通关", "class.quiz": "测验", "class.streak": "每日连续",
-    "levels.byLayer": "按 OSI 层", "levels.inOrder": "按顺序", "levels.worldStars": "★ {n}/{max}",
+    "levels.byLayer": "按 OSI 层", "levels.inOrder": "按顺序", "levels.challenges": "挑战包",
+    "ch.intro": "四个类别，每类四种难度。简单级始终开放；通关后即可解锁同一行的下一个难度。",
+    "ch.title": "{cat} · {diff} —— {name}", "ch.locked": "先通关{prev}", "ch.hud": "{diff}", "ch.next": "下一关：{diff}", "levels.worldStars": "★ {n}/{max}",
     "levels.best": "最佳 {n}/{count}", "levels.none": "尚未送达", "levels.locked": "未解锁",
     "ov.intro": "第 {n} 关 —— {name}", "ov.start": "开始",
     "ov.goal": "发出 {count} 个数据包 · 至少送达 {need} 个",
@@ -1116,7 +1120,8 @@ function fmtTime(ticks) {
 }
 
 function updateHUD() {
-  el("hud-level").textContent = levelIndex < 0 ? t("hud.custom") : t("hud.level", { n: levelIndex + 1 });
+  el("hud-level").textContent = game.level.category ? L(DIFFICULTIES.find(d => d.id === game.level.difficulty).name)
+    : levelIndex < 0 ? t("hud.custom") : t("hud.level", { n: levelIndex + 1 });
   el("hud-name").textContent = L(game.level.name);
   el("hud-out").textContent = `${game.spawned}/${game.level.count}`;
   el("hud-in").textContent = game.saved;
@@ -1310,7 +1315,7 @@ function showIntro() {
     return;
   }
   overlay({
-    title: t("ov.intro", { n: levelIndex + 1, name: L(lv.name) }),
+    title: lv.category ? challengeTitle(lv) : t("ov.intro", { n: levelIndex + 1, name: L(lv.name) }),
     goal: `<b>${t("ov.goal", { count: lv.count, need: lv.need })}</b><br>${L(lv.goal)}`,
     note: L(lv.note),
     primary: [t("ov.start"), hideOverlay],
@@ -1321,8 +1326,56 @@ function showIntro() {
 const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 function editCustom() { location.href = "editor.html#lvl=" + encodeLevel(customLevel); }
 
+/* ------------------------------------------------------- challenge pack */
+const challengeRow = lv => CHALLENGE_LEVELS.filter(c => c.category === lv.category);
+function challengeOpen(lv) {
+  const row = challengeRow(lv), i = row.indexOf(lv);
+  return i <= 0 || (progress.stars[row[i - 1].id] || 0) > 0;
+}
+function challengeTitle(lv) {
+  return t("ch.title", {
+    cat: L(CATEGORIES.find(c => c.id === lv.category).name),
+    diff: L(DIFFICULTIES.find(d => d.id === lv.difficulty).name), name: L(lv.name)
+  });
+}
+function startChallenge(lv) {
+  customLevel = lv;
+  startLevel(-1);
+}
+
 function showResult() {
   const lv = game.level, won = game.state === "won";
+  if (lv.category) {
+    const losses = Object.entries(game.losses).map(([k, n]) => `${n} ${t("loss." + k)}`).join(" · ");
+    const stats = `<span>${t("stat.saved")} <b>${game.saved}/${lv.count}</b></span><span>${t("stat.time")} <b>${fmtTime(game.tick)}</b></span>`
+      + (losses ? `<span>${t("stat.lost")}: ${losses}</span>` : "");
+    if (won) {
+      const stars = starsFor(lv, game.saved, game.used, true);
+      progress.stars[lv.id] = Math.max(progress.stars[lv.id] || 0, stars);
+      progress.best[lv.id] = Math.max(progress.best[lv.id] || 0, game.saved);
+      store.set("packetrush.progress", JSON.stringify(progress));
+      const row = challengeRow(lv), next = row[row.indexOf(lv) + 1];
+      overlay({
+        title: t("ov.won"),
+        goal: t("ov.wonText", { saved: game.saved, count: lv.count, need: lv.need }),
+        note: L(lv.note), stats, quiz: true,
+        stars: starText(stars) + "<small>" + (stars === 3 ? t("stars.all") : stars === 2 ? t("stars.need3", { n: lv.par.skills }) : t("stars.need2", { n: lv.par.saved })) + "</small>",
+        primary: next ? [t("ch.next", { diff: L(DIFFICULTIES.find(d => d.id === next.difficulty).name) }), () => startChallenge(next)] : [t("ov.levels"), openChallenges],
+        secondary: [t("ov.replay"), () => startLevel(-1)]
+      });
+      beep(523, 120, "triangle", 0.05); setTimeout(() => beep(784, 200, "triangle", 0.05), 120);
+    } else {
+      overlay({
+        title: t("ov.lost"),
+        goal: t("ov.lostText", { saved: game.saved, need: lv.need }) + "<br>" + L(lv.goal),
+        stats,
+        primary: [t("ov.retry"), () => startLevel(-1, true)],
+        secondary: [t("ov.levels"), openChallenges]
+      });
+      beep(220, 300, "sawtooth", 0.04, -100);
+    }
+    return;
+  }
   if (lv.custom) {                       // custom levels record nothing
     overlay({
       title: won ? t("ov.won") : t("ov.lost"),
@@ -1729,13 +1782,49 @@ function levelCard(lv, i) {
   return b;
 }
 
+function openChallenges() { levelView = "challenges"; store.set("packetrush.levelView", levelView); openLevels(); }
+
+function renderChallenges(list) {
+  list.innerHTML = `<p class="ch-intro">${t("ch.intro")}</p>`;
+  for (const cat of CATEGORIES) {
+    const row = CHALLENGE_LEVELS.filter(c => c.category === cat.id);
+    const earned = row.reduce((a, lv) => a + (progress.stars[lv.id] || 0), 0);
+    const sec = document.createElement("section");
+    sec.className = "ch-cat";
+    sec.innerHTML = `<h3><span>${cat.icon}</span>${L(cat.name)}<span class="wstars">${t("levels.worldStars", { n: earned, max: row.length * 3 })}</span></h3>`;
+    const grid = document.createElement("div");
+    grid.className = "ch-row";
+    row.forEach((lv, i) => {
+      const diff = DIFFICULTIES.find(d => d.id === lv.difficulty), open = challengeOpen(lv), st = progress.stars[lv.id] || 0;
+      const b = document.createElement("button");
+      b.className = "level-card" + (open ? "" : " locked");
+      b.style.setProperty("--diff", diff.color);
+      b.innerHTML = `<span class="diff">${L(diff.name)}</span><strong>${L(lv.name)}</strong>`
+        + (open ? `<span class="lv-best">${progress.best[lv.id] ? t("levels.best", { n: progress.best[lv.id], count: lv.count }) : t("levels.none")}</span><span class="lv-stars">${starText(st)}</span>`
+          : `<span class="lv-best">${t("ch.locked", { prev: L(DIFFICULTIES.find(d => d.id === row[i - 1].difficulty).name) })}</span>`);
+      b.disabled = !open;
+      b.onclick = () => { el("levels-dialog").close(); startChallenge(lv); };
+      grid.append(b);
+    });
+    sec.append(grid);
+    list.append(sec);
+  }
+}
+
 function openLevels() {
   renderDaily();
   el("tab-layers").setAttribute("aria-selected", String(levelView === "layers"));
-  el("tab-order").setAttribute("aria-selected", String(levelView !== "layers"));
+  el("tab-order").setAttribute("aria-selected", String(levelView === "order"));
+  el("tab-challenges").setAttribute("aria-selected", String(levelView === "challenges"));
   const list = el("level-list");
   list.innerHTML = "";
   list.classList.toggle("worlds", levelView === "layers");
+  list.classList.toggle("challenges", levelView === "challenges");
+  if (levelView === "challenges") {
+    renderChallenges(list);
+    if (!el("levels-dialog").open) el("levels-dialog").showModal();
+    return;
+  }
   if (levelView === "layers") {
     /* seven worlds, climbing the stack from the wire to the application */
     for (let n = 1; n <= 7; n++) {
@@ -1818,6 +1907,7 @@ el("theme-pick").onchange = ev => {
 el("btn-levels").onclick = openLevels;
 el("tab-layers").onclick = () => { levelView = "layers"; store.set("packetrush.levelView", levelView); openLevels(); };
 el("tab-order").onclick = () => { levelView = "order"; store.set("packetrush.levelView", levelView); openLevels(); };
+el("tab-challenges").onclick = openChallenges;
 el("backdrop-pick").onchange = ev => {
   backdrop = ev.target.value;
   store.set("packetrush.backdrop", backdrop);
