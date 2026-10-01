@@ -91,10 +91,13 @@ stack from Physical to Application, each with its stars — or in order.
 
 ### The Challenge Pack
 
-Sixteen extra levels outside the campaign (*Levels → Challenge Pack*): four
-categories, each with an **Easy**, **Intermediate**, **Difficult** and
-**Insane** level. Easy is always open; clearing a level unlocks the next one in
-its row, and challenge stars are kept separately from the campaign.
+Sixteen extra levels outside the campaign — the **Challenges** button, or
+*Levels → Challenge Pack*: four categories, each with an **Easy**,
+**Intermediate**, **Difficult** and **Insane** level. Every stage is open from
+the start, so players choose what to play; the difficulty filter shows one
+difficulty across all four categories (say, every Insane stage), and is
+remembered. Challenge stars are kept separately from the campaign, and a win
+offers the next difficulty in the same category.
 
 | Category | Easy | Intermediate | Difficult | Insane |
 |---|---|---|---|---|
@@ -278,8 +281,8 @@ TCP 段与端口、在路由器之间跳转的数据包、以太网帧、比特�
 引擎验证关卡，「试玩」直接进入游戏，「复制分享链接」生成任何人都能打开的关卡链接。
 
 **挑战包**：在「关卡 → 挑战包」中有 16 个额外关卡，分为挖掘与隧道、架桥与攀爬、路由与拥塞、
-网络安全四个类别，每类各有简单、中等、困难、疯狂四种难度。简单级始终开放，通关后解锁同一行的
-下一个难度。每个关卡都经过检查程序验证：可以通关、不操作会失败、并且能拿到三颗星。
+网络安全四个类别，每类各有简单、中等、困难、疯狂四种难度。所有关卡一开始就全部开放，玩家可以
+自由选择；难度筛选可以只显示某一难度（例如全部疯狂级）。点击顶栏的「挑战」按钮即可进入。每个关卡都经过检查程序验证：可以通关、不操作会失败、并且能拿到三颗星。
 
 **手机与平板**：点选技能后点击数据包即可，触屏的点击范围更大。竖屏时技能排成网格，
 横屏时棋盘在左、技能栏在右。3D 视图可双指缩放。**全屏**按钮会隐藏菜单栏；安卓和电脑上

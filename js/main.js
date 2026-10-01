@@ -40,7 +40,8 @@ const TEXT = {
     "class.teacher": "Teacher page", "class.copied": "Copied — paste it wherever your teacher asked.", "class.copyFail": "Could not copy automatically — the code is selected, copy it yourself.",
     "class.needName": "Type your name first.", "class.stars": "Stars", "class.cleared": "Levels cleared", "class.quiz": "Quiz", "class.streak": "Daily streak",
     "levels.byLayer": "By OSI layer", "levels.inOrder": "In order", "levels.challenges": "Challenge Pack",
-    "ch.intro": "Four categories, four difficulties each. Easy is always open; clear a level to unlock the next one in its row.",
+    "ch.intro": "Four categories, four difficulties each — every stage is open, so pick any one. Easy is a good place to start a category.",
+    "btn.challenges": "Challenges", "ch.all": "All",
     "ch.title": "{cat} · {diff} — {name}", "ch.locked": "clear {prev} first", "ch.hud": "{diff}", "ch.next": "Next: {diff}", "levels.worldStars": "★ {n}/{max}",
     "levels.best": "best {n}/{count}", "levels.none": "not delivered yet", "levels.locked": "locked",
     "ov.intro": "Level {n} — {name}", "ov.start": "Start",
@@ -119,7 +120,8 @@ const TEXT = {
     "class.teacher": "教师页面", "class.copied": "已复制 —— 粘贴到老师指定的地方即可。", "class.copyFail": "无法自动复制 —— 成绩码已选中，请手动复制。",
     "class.needName": "请先输入你的名字。", "class.stars": "星星", "class.cleared": "已通关", "class.quiz": "测验", "class.streak": "每日连续",
     "levels.byLayer": "按 OSI 层", "levels.inOrder": "按顺序", "levels.challenges": "挑战包",
-    "ch.intro": "四个类别，每类四种难度。简单级始终开放；通关后即可解锁同一行的下一个难度。",
+    "ch.intro": "四个类别，每类四种难度 —— 所有关卡全部开放，随便挑。想入门某个类别，可以从简单级开始。",
+    "btn.challenges": "挑战", "ch.all": "全部",
     "ch.title": "{cat} · {diff} —— {name}", "ch.locked": "先通关{prev}", "ch.hud": "{diff}", "ch.next": "下一关：{diff}", "levels.worldStars": "★ {n}/{max}",
     "levels.best": "最佳 {n}/{count}", "levels.none": "尚未送达", "levels.locked": "未解锁",
     "ov.intro": "第 {n} 关 —— {name}", "ov.start": "开始",
@@ -1328,10 +1330,9 @@ function editCustom() { location.href = "editor.html#lvl=" + encodeLevel(customL
 
 /* ------------------------------------------------------- challenge pack */
 const challengeRow = lv => CHALLENGE_LEVELS.filter(c => c.category === lv.category);
-function challengeOpen(lv) {
-  const row = challengeRow(lv), i = row.indexOf(lv);
-  return i <= 0 || (progress.stars[row[i - 1].id] || 0) > 0;
-}
+/* every special stage is open: players choose what to play */
+function challengeOpen() { return true; }
+let challengeFilter = store.get("packetrush.chFilter", "all");
 function challengeTitle(lv) {
   return t("ch.title", {
     cat: L(CATEGORIES.find(c => c.id === lv.category).name),
@@ -1786,14 +1787,29 @@ function openChallenges() { levelView = "challenges"; store.set("packetrush.leve
 
 function renderChallenges(list) {
   list.innerHTML = `<p class="ch-intro">${t("ch.intro")}</p>`;
+  /* difficulty filter: show one difficulty across every category, or all */
+  const filters = document.createElement("div");
+  filters.className = "ch-filters";
+  for (const f of [{ id: "all", name: null, color: null }, ...DIFFICULTIES]) {
+    const b = document.createElement("button");
+    b.className = "ch-filter";
+    b.textContent = f.name ? L(f.name) : t("ch.all");
+    if (f.color) b.style.setProperty("--f", f.color);
+    b.setAttribute("aria-pressed", String(challengeFilter === f.id));
+    b.onclick = () => { challengeFilter = f.id; store.set("packetrush.chFilter", f.id); renderChallenges(list); };
+    filters.append(b);
+  }
+  list.append(filters);
   for (const cat of CATEGORIES) {
-    const row = CHALLENGE_LEVELS.filter(c => c.category === cat.id);
+    const all = CHALLENGE_LEVELS.filter(c => c.category === cat.id);
+    const row = challengeFilter === "all" ? all : all.filter(c => c.difficulty === challengeFilter);
     const earned = row.reduce((a, lv) => a + (progress.stars[lv.id] || 0), 0);
     const sec = document.createElement("section");
     sec.className = "ch-cat";
-    sec.innerHTML = `<h3><span>${cat.icon}</span>${L(cat.name)}<span class="wstars">${t("levels.worldStars", { n: earned, max: row.length * 3 })}</span></h3>`;
+    const earnedAll = all.reduce((a, lv) => a + (progress.stars[lv.id] || 0), 0);
+    sec.innerHTML = `<h3><span>${cat.icon}</span>${L(cat.name)}<span class="wstars">${t("levels.worldStars", { n: earnedAll, max: all.length * 3 })}</span></h3>`;
     const grid = document.createElement("div");
-    grid.className = "ch-row";
+    grid.className = "ch-row" + (challengeFilter === "all" ? "" : " filtered");
     row.forEach((lv, i) => {
       const diff = DIFFICULTIES.find(d => d.id === lv.difficulty), open = challengeOpen(lv), st = progress.stars[lv.id] || 0;
       const b = document.createElement("button");
@@ -1908,6 +1924,7 @@ el("btn-levels").onclick = openLevels;
 el("tab-layers").onclick = () => { levelView = "layers"; store.set("packetrush.levelView", levelView); openLevels(); };
 el("tab-order").onclick = () => { levelView = "order"; store.set("packetrush.levelView", levelView); openLevels(); };
 el("tab-challenges").onclick = openChallenges;
+el("btn-challenges").onclick = openChallenges;
 el("backdrop-pick").onchange = ev => {
   backdrop = ev.target.value;
   store.set("packetrush.backdrop", backdrop);
