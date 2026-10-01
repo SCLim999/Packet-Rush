@@ -40,6 +40,7 @@ of each skill.
 | Pause / fast forward / restart | <kbd>P</kbd> / <kbd>F</kbd> / <kbd>R</kbd> |
 | Switch 3D / 2D view | <kbd>V</kbd>, or the *View* button |
 | Tilt / zoom / reset the 3D camera | drag empty space / scroll / double-click |
+| Sound on / off | <kbd>M</kbd>, or the *Sound* button (remembered) |
 | Full screen | <kbd>G</kbd>, the *Full screen* button, or the ⛶ icon at the end of the status bar |
 | End the run (*kill -9*) | <kbd>K</kbd> twice |
 | Language | the *中文 / EN* button |
@@ -229,7 +230,7 @@ every push and pull request.
 手写的 WebGL2 渲染器绘制。克隆后直接打开 `index.html` 即可。
 
 **操作**：在工具栏选择技能（或按 <kbd>1</kbd>–<kbd>7</kbd>），再点击数据包分配工作。
-<kbd>P</kbd> 暂停，<kbd>F</kbd> 快进，<kbd>R</kbd> 重来，<kbd>V</kbd> 切换 3D / 2D，<kbd>G</kbd> 全屏，
+<kbd>P</kbd> 暂停，<kbd>F</kbd> 快进，<kbd>R</kbd> 重来，<kbd>V</kbd> 切换 3D / 2D，<kbd>G</kbd> 全屏，<kbd>M</kbd> 声音开关，
 连按两次 <kbd>K</kbd> 结束本局。3D 视图中拖动空白处旋转镜头，滚轮缩放，双击复位。
 **配色**选单提供明亮、暗夜、柔和、活力、热烈五种配色。
 

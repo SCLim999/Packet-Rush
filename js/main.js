@@ -71,7 +71,7 @@ const TEXT = {
     "help.title": "How to play",
     "help.p1": "Packets drop out of the <b>router</b> and walk forward until they hit a wall, then turn around. They step up small ledges, but a fall that is too long <b>corrupts</b> them, and walking off the edge of the map <b>drops</b> them.",
     "help.p2": "Choose a skill in the toolbar (or press <kbd>1</kbd>–<kbd>7</kbd>), then click a packet to give it that job. Each level hands out a limited number of each skill. Get enough packets into the <b>server</b> before their <b>TTL</b> — time to live — runs out.",
-    "help.p3": "<kbd>P</kbd> pause · <kbd>F</kbd> fast forward · <kbd>V</kbd> 3D / 2D view · <kbd>G</kbd> full screen · <kbd>R</kbd> restart · <kbd>K</kbd> twice: <b>kill -9</b> ends the run by overflowing every packet.",
+    "help.p3": "<kbd>P</kbd> pause · <kbd>F</kbd> fast forward · <kbd>V</kbd> 3D / 2D view · <kbd>G</kbd> full screen · <kbd>M</kbd> sound on / off · <kbd>R</kbd> restart · <kbd>K</kbd> twice: <b>kill -9</b> ends the run by overflowing every packet.",
     "foot.text": "A Lemmings-style networking puzzle. Mouse, keyboard or touch — no install, no plugins.",
     "skill.uplink": "Uplink", "skill.buffer": "Buffer", "skill.overflow": "Overflow", "skill.firewall": "Firewall",
     "skill.bridge": "Bridge", "skill.tunnel": "Tunnel", "skill.pipe": "Pipe",
@@ -148,7 +148,7 @@ const TEXT = {
     "help.title": "玩法说明",
     "help.p1": "数据包从<b>路由器</b>里掉出来，一直向前走，碰到墙就掉头。它们能迈上小台阶，但摔得太远会<b>损坏</b>，走出地图边缘会<b>丢失</b>。",
     "help.p2": "在工具栏选择一个技能（或按 <kbd>1</kbd>–<kbd>7</kbd>），再点击一个数据包，把这项工作交给它。每关每种技能的数量有限。要在数据包的 <b>TTL</b>（生存时间）耗尽之前，把足够多的数据包送进<b>服务器</b>。",
-    "help.p3": "<kbd>P</kbd> 暂停 · <kbd>F</kbd> 快进 · <kbd>V</kbd> 切换 3D / 2D · <kbd>G</kbd> 全屏 · <kbd>R</kbd> 重来 · 连按两次 <kbd>K</kbd>：<b>kill -9</b> 让所有数据包溢出，结束本局。",
+    "help.p3": "<kbd>P</kbd> 暂停 · <kbd>F</kbd> 快进 · <kbd>V</kbd> 切换 3D / 2D · <kbd>G</kbd> 全屏 · <kbd>M</kbd> 声音开关 · <kbd>R</kbd> 重来 · 连按两次 <kbd>K</kbd>：<b>kill -9</b> 让所有数据包溢出，结束本局。",
     "foot.text": "旅鼠风格的网络解谜游戏。鼠标、键盘或触屏均可 —— 无需安装，无需插件。",
     "skill.uplink": "上行链路", "skill.buffer": "缓冲区", "skill.overflow": "溢出", "skill.firewall": "防火墙",
     "skill.bridge": "网桥", "skill.tunnel": "隧道", "skill.pipe": "管道",
@@ -1630,6 +1630,19 @@ function onFullChange() {
 document.addEventListener("fullscreenchange", onFullChange);
 document.addEventListener("webkitfullscreenchange", onFullChange);
 el("btn-full").onclick = toggleFull;
+
+/* Sound on / off, remembered between visits. */
+function showSound() {
+  el("btn-sound").setAttribute("aria-pressed", String(soundOn));
+  el("btn-sound").querySelector("span").textContent = t("btn.sound", { state: t(soundOn ? "state.on" : "state.off") });
+}
+function toggleSound() {
+  soundOn = !soundOn;
+  store.set("packetrush.sound", soundOn ? "on" : "off");
+  showSound();
+  if (soundOn) beep(660, 60, "triangle", 0.04, 200);      // a short confirmation, after the click unlocks audio
+}
+el("btn-sound").onclick = toggleSound;
 el("btn-full-hud").onclick = toggleFull;
 
 function toggleView() {
@@ -1679,6 +1692,7 @@ document.addEventListener("keydown", ev => {
   else if (k === "-" || k === "_") nudgeRate(4);
   else if (k === "=" || k === "+") nudgeRate(-4);
   else if (k === "g") toggleFull();
+  else if (k === "m") toggleSound();
   else if (k === "escape" && pseudoFs) setPseudo(false);
   else if (k === "r") startLevel(levelIndex, true);
   else if (k === "k") nuke();
@@ -1762,6 +1776,7 @@ function buildHelp() {
 
 /* --------------------------------------------------- language and theme */
 function applyText() {
+  if (typeof showSound === "function") showSound();
   document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
   document.body.classList.toggle("lang-zh", lang === "zh");
   document.title = t("app.title") + (lang === "zh" ? " —— 把数据包送到服务器" : " — guide the packets to the server");
